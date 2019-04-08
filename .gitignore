@@ -1,0 +1,4 @@
+Banana_Linux/
+*.pyc
+*.log
+.ipynb_checkpoints/
