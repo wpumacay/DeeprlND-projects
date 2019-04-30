@@ -10,7 +10,7 @@ from IPython.core.debugger import set_trace
 class DqnReplayBuffer( object ) :
 
     def __init__( self, bufferSize, randomSeed ) :
-        super( ReplayBuffer, self ).__init__()
+        super( DqnReplayBuffer, self ).__init__()
 
         self._bufferSize = bufferSize
         self._experience = namedtuple( 'Step', 
