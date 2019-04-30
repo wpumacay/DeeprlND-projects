@@ -92,12 +92,10 @@ class IDqnAgent( object ) :
             self._qmodel_target.clone( self._qmodel_actor, tau = 1.0 )
 
     def act( self, state, inference = False ) :
-        _qvalues = self._qmodel_actor.eval( self._preprocess( state ) )
-
-        if inference :
-            return np.argmax( _qvalues )
+        if inference or np.random.rand() > self._epsilon :
+            return np.argmax( self._qmodel_actor.eval( self._preprocess( state ) ) )
         else :
-            return self._egreedy( _qvalues )
+            return np.random.choice( self._nActions )
 
     def step( self, transition ) :
         # grab information from this transition
@@ -145,27 +143,6 @@ class IDqnAgent( object ) :
                 # update epsilon with a geometric decay given by a decay factor
                 _epsFactor = self._epsDecay if self._istep >= self._learningStartsAt else 1.0
                 self._epsilon = max( self._epsEnd, self._epsilon * _epsFactor )
-
-    def _egreedy( self, qvalues ) :
-        """Get the action to take using eps-greedy over the given qvalues
-
-        Args:
-            qvalues (np.ndarray) : q-values evaluated from the model
-
-        Returns:
-            int : action to take using eps-greedy approach
-
-        """
-
-        # give all actions some small exploratory prob -> eps / nActions
-        _probs = np.ones( self._nActions ) * self._epsilon / self._nActions
-        _greedyAction = np.argmax( qvalues )
-        # give greedy action some bigger prob -> 1 - eps + eps/nA
-        _probs[ _greedyAction ] += 1.0 - self._epsilon
-        # normalize just in case
-        _probs /= np.sum( _probs )
-
-        return np.random.choice( self._nActions, p = _probs )
 
     def _preprocess( self, rawState ) :
         """Preprocess a raw state into an appropriate state representation

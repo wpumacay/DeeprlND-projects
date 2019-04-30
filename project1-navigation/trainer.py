@@ -22,7 +22,7 @@ TEST = False
 def train( env, agent, savefile ) :
     MAX_EPISODES = agent.learningMaxSteps
     MAX_STEPS_EPISODE = 1000
-    LOG_WINDOW_SIZE = 10
+    LOG_WINDOW_SIZE = 1
 
     _progressbar = tqdm( range( 1, MAX_EPISODES + 1 ), desc = 'Training>', leave = True )
     _maxAvgScore = -np.inf
@@ -36,7 +36,7 @@ def train( env, agent, savefile ) :
         _score = 0
         _nsteps = 0
 
-        for istep in range( MAX_STEPS_EPISODE ) :
+        while True :
             # grab action from dqn agent: runs through model, e-greedy, etc.
             _action = agent.act( _state, inference = False )
             # apply action in simulator to get the transition
@@ -68,7 +68,7 @@ def train( env, agent, savefile ) :
             # log results
             if iepisode % LOG_WINDOW_SIZE == 0 :
                 ## set_trace()
-                _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr=%.2f, Eps=%.2f, Steps-Avg=%d' % (_maxAvgScore, _score, agent.epsilon, _avgSteps ) )
+                _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon ) )
                 _progressbar.refresh()
 
     if savefile is not None :
