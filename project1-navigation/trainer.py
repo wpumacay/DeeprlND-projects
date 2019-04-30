@@ -22,17 +22,19 @@ TEST = False
 def train( env, agent, savefile ) :
     MAX_EPISODES = agent.learningMaxSteps
     MAX_STEPS_EPISODE = 1000
-    LOG_WINDOW_SIZE = 100
+    LOG_WINDOW_SIZE = 10
 
     _progressbar = tqdm( range( 1, MAX_EPISODES + 1 ), desc = 'Training>', leave = True )
     _maxAvgScore = -np.inf
     _scoresWindow = deque( maxlen = LOG_WINDOW_SIZE )
     _scores = []
+    _stepsWindow = deque( maxlen = LOG_WINDOW_SIZE )
 
     for iepisode in _progressbar :
 
         _state = env.reset( training = True )
         _score = 0
+        _nsteps = 0
 
         for istep in range( MAX_STEPS_EPISODE ) :
             # grab action from dqn agent: runs through model, e-greedy, etc.
@@ -48,22 +50,25 @@ def train( env, agent, savefile ) :
             # prepare for next iteration
             _state = _snext
             _score += _reward
+            _nsteps += 1
 
             if _done :
                 break
 
         _scores.append( _score )
         _scoresWindow.append( _score )
+        _stepsWindow.append( _nsteps )
 
         if iepisode >= LOG_WINDOW_SIZE :
             _avgScore = np.mean( _scoresWindow )
+            _avgSteps = np.mean( _stepsWindow )
             if _avgScore > _maxAvgScore :
                 _maxAvgScore = _avgScore
 
             # log results
             if iepisode % LOG_WINDOW_SIZE == 0 :
                 ## set_trace()
-                _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr=%.2f, Eps=%.2f' % (_maxAvgScore, _score, agent.epsilon) )
+                _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr=%.2f, Eps=%.2f, Steps-Avg=%d' % (_maxAvgScore, _score, agent.epsilon, _avgSteps ) )
                 _progressbar.refresh()
 
     if savefile is not None :
