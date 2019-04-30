@@ -1,6 +1,7 @@
 
 import os
 import numpy as np
+import argparse
 from tqdm import tqdm
 from collections import deque
 from collections import defaultdict
@@ -25,7 +26,7 @@ from navigation import model_pytorch
 from IPython.core.debugger import set_trace
 
 GRIDWORLD = False
-TEST = True
+TEST = False
 
 # @DEBUG: test method for gridworld --------------------------------------------
 def plotQTable( envGridworld, agentGridworld ) :
@@ -131,7 +132,7 @@ def test( env, agent ) :
         _progressbar.set_description( 'Testing> Score=%.2f' % ( _score ) )
         _progressbar.refresh()
 
-def experiment() :
+def experiment( savefile ) :
     # paths to the environment executables
     _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
     _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
@@ -169,10 +170,15 @@ def experiment() :
         # ----------------------------------------------------------------------
 
     if not TEST :
-        train( _env, _agent, 'banana_model_weights.pth' )
+        train( _env, _agent, savefile )
     else :
-        _agent.load( 'banana_model_weights.pth' )
+        _agent.load( savefile )
         test( _env, _agent )
 
 if __name__ == '__main__' :
-    experiment()
+    _parser = argparse.ArgumentParser()
+    _parser.add_argument( '--filename', help='file to save|load the model', type=str, default='banana_model_weights.pth' )
+
+    _args = _parser.parse_args()
+
+    experiment( _args.filename )
