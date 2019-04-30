@@ -1,4 +1,5 @@
-Banana_Linux/
+executables/
 *.pyc
 *.log
 .ipynb_checkpoints/
+__pycache__/
