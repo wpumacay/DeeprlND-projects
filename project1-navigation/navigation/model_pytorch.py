@@ -64,8 +64,8 @@ class NetworkPytorchGeneric( nn.Module ) :
         return x
 
     def clone( self, other, tau ) :
-        for _localParams, _otherParams in zip( self.parameters(), other.parameters() ) :
-            _localParams.data.copy_( tau * _localParams.data + ( 1.0 - tau ) * _otherParams.data )
+        for _thisParams, _otherParams in zip( self.parameters(), other.parameters() ) :
+            _thisParams.data.copy_( ( 1.| - tau ) * _thisParams.data + ( tau ) * _otherParams.data )
 
 class NetworkPytorchCustom( nn.Module ) :
 
@@ -104,43 +104,44 @@ class NetworkPytorchCustom( nn.Module ) :
         return self.out
 
     def clone( self, other, tau ) :
-        for _localParams, _otherParams in zip( self.parameters(), other.parameters() ) :
-            _localParams.data.copy_( tau * _localParams.data + ( 1.0 - tau ) * _otherParams.data )
+        for _thisParams, _otherParams in zip( self.parameters(), other.parameters() ) :
+            _thisParams.data.copy_( ( 1. - tau ) * _thisParams.data + ( tau ) * _otherParams.data )
 
 class DqnModelPytorch( model.IDqnModel ) :
 
-    def __init__( self, name, modelConfig ) :
-        super( DqnModelPytorch, self ).__init__( name, modelConfig )
+    def __init__( self, name, modelConfig, trainable ) :
+        super( DqnModelPytorch, self ).__init__( name, modelConfig, trainable )
 
     def build( self ) :
-        self._device = torch.device( 'cuda:0' if torch.cuda.is_available() else 'cpu' )
-
-        self._lossFcn = nn.MSELoss()
-        self._losses = deque( maxlen = 100 )
-
         # @TEST: creating a custom fc network
         self._nnetwork = NetworkPytorchCustom( self._inputShape,
                                                self._outputShape,
                                                self._layersDefs )
 
-        self._nnetwork.to( self._device )
-
-        # @TODO: Add optimizer options to modelconfig
-        self._optimizer = optim.Adam( self._nnetwork.parameters(), lr = self._lr )
-
     def initialize( self, args ) :
-        # nothing to do here (pytorch is nice :D)
-        pass
+        # grab current pytorch device
+        self._device = args['device']
+        # send network to device
+        self._nnetwork.to( self._device )
+        # create train functionality if necessary
+        if self._trainable :
+            self._lossFcn = nn.MSELoss()
+            self._losses = deque( maxlen = 100 )
+            self._optimizer = optim.Adam( self._nnetwork.parameters(), lr = self._lr )
 
     def eval( self, state, inference = False ) :
-        self._nnetwork.eval()
-
         _xx = torch.from_numpy( state ).float().to( self._device )
 
-        return self._nnetwork.forward( _xx ).cpu().detach().numpy()
+        self._nnetwork.eval()
+        with torch.no_grad() :
+            _qvalues = self._nnetwork.forward( _xx ).cpu().data.numpy()
+        self._nnetwork.train()
+
+        return _qvalues
 
     def train( self, states, actions, targets ) :
-        self._nnetwork.train()
+        if not self._trainable :
+            return
         
         _aa = torch.from_numpy( actions ).unsqueeze( 1 ).to( self._device )
         _xx = torch.from_numpy( states ).float().to( self._device )
@@ -175,8 +176,10 @@ class DqnModelPytorch( model.IDqnModel ) :
         if self._nnetwork :
             self._nnetwork.load_state_dict( torch.load( filename ) )
 
+DEVICE = torch.device( 'cuda:0' ) if torch.cuda.is_available() else 'cpu'
+
 def BackendInitializer() :
     # nothing to initialize (no sessions, global variables, etc.)
-    return {}
+    return { 'device' : DEVICE }
 
-DqnModelBuilder = lambda name, config : DqnModelPytorch( name, config )
+DqnModelBuilder = lambda name, config, trainable : DqnModelPytorch( name, config, trainable )

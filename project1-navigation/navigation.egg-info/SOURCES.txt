@@ -1,5 +1,6 @@
 setup.py
 navigation/__init__.py
+navigation/agent_gridworld.py
 navigation/agent_raycast.py
 navigation/agent_visual.py
 navigation/model_pytorch.py

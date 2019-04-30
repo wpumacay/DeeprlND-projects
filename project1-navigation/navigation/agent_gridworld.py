@@ -30,10 +30,10 @@ AGENT_CONFIG.minibatchSize              = 32
 AGENT_CONFIG.learningStartsAt           = 0
 AGENT_CONFIG.learningUpdateFreq         = 4
 AGENT_CONFIG.learningUpdateTargetFreq   = 4
-AGENT_CONFIG.learningMaxSteps           = 1000
+AGENT_CONFIG.learningMaxSteps           = 2000
 AGENT_CONFIG.replayBufferSize           = 10000
 AGENT_CONFIG.discount                   = 0.999
-AGENT_CONFIG.tau                        = 0.001
+AGENT_CONFIG.tau                        = 0.01
 AGENT_CONFIG.seed                       = 0
 
 MODEL_CONFIG = config.DqnModelConfig()

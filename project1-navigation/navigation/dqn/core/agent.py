@@ -62,8 +62,8 @@ class IDqnAgent( object ) :
         modelConfig._lr = self._lr
 
         # create the model accordingly
-        self._qmodel_actor = modelBuilder( 'actor_model', modelConfig )
-        self._qmodel_target = modelBuilder( 'target_model', modelConfig )
+        self._qmodel_actor = modelBuilder( 'actor_model', modelConfig, True )
+        self._qmodel_target = modelBuilder( 'target_model', modelConfig, False )
 
         # initialize backend-specific functionality
         _initInfo = backendInitializer()

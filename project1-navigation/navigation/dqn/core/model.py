@@ -6,11 +6,14 @@ from IPython.core.debugger import set_trace
 
 class IDqnModel( object ) :
 
-    def __init__( self, name, modelConfig ) :
+    def __init__( self, name, modelConfig, trainable ) :
         super( IDqnModel, self ).__init__()
 
         # just an identifier
         self._name = name
+
+        # whether this is an actor or target network
+        self._trainable = trainable
 
         # save configuration data
         self._inputShape = modelConfig.inputShape
@@ -48,6 +51,10 @@ class IDqnModel( object ) :
     @property
     def name( self ) :
         return self._name
+
+    @property
+    def trainable( self ) :
+        return self._trainable
 
     def _printConfig( self ) :
         # Each model could potentially override this with its own extra details

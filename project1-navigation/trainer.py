@@ -24,8 +24,8 @@ from navigation import model_pytorch
 
 from IPython.core.debugger import set_trace
 
-GRIDWORLD = True
-TEST = False
+GRIDWORLD = False
+TEST = True
 
 # @DEBUG: test method for gridworld --------------------------------------------
 def plotQTable( envGridworld, agentGridworld ) :
@@ -55,7 +55,7 @@ def train( env, agent, savefile ) :
 
     for iepisode in _progressbar :
 
-        _state = env.reset()
+        _state = env.reset( training = True )
         _score = 0
         _nsteps = 0
 
@@ -104,16 +104,32 @@ def train( env, agent, savefile ) :
             agent.save( savefile )
 
 def test( env, agent ) :
-    for _ in range( 10 ) :
+    _progressbar = tqdm( range( 1, 10 + 1 ), desc = 'Testing>', leave = True )
+    for _ in _progressbar :
 
         _state = env.reset( training = False )
+        _score = 0.0
+        _goodBananas = 0
+        _badBananas = 0
 
         while True :
             _action = agent.act( _state, inference = True )
-            _state, _, _done, _ = env.step( _action )
+            _state, _reward, _done, _ = env.step( _action )
+
+            if _reward > 0 :
+                _goodBananas += 1
+                _progressbar.write( 'Got banana! :D. So far: %d' % _goodBananas )
+            elif _reward < 0 :
+                _badBananas += 1
+                _progressbar.write( 'Got bad banana :/. So far: %d' % _badBananas )
+
+            _score += _reward
 
             if _done :
                 break
+
+        _progressbar.set_description( 'Testing> Score=%.2f' % ( _score ) )
+        _progressbar.refresh()
 
 def experiment() :
     # paths to the environment executables
@@ -155,6 +171,7 @@ def experiment() :
     if not TEST :
         train( _env, _agent, 'banana_model_weights.pth' )
     else :
+        _agent.load( 'banana_model_weights.pth' )
         test( _env, _agent )
 
 if __name__ == '__main__' :
