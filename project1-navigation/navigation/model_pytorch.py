@@ -144,29 +144,29 @@ class DqnModelPytorch( model.IDqnModel ) :
 
     def train( self, states, actions, targets ) :
         if not self._trainable :
-            return
-        
-        _aa = torch.from_numpy( actions ).unsqueeze( 1 ).to( self._device )
-        _xx = torch.from_numpy( states ).float().to( self._device )
-        _yy = torch.from_numpy( targets ).float().unsqueeze( 1 ).to( self._device )
-
-        # reset the gradients buffer
-        self._optimizer.zero_grad()
-
-        # do forward pass to compute q-target predictions
-        _yyhat = self._nnetwork.forward( _xx ).gather( 1, _aa )
-
-        ## set_trace()
-
-        # and compute loss and gradients
-        _loss = self._lossFcn( _yyhat, _yy )
-        _loss.backward()
-
-        # run optimizer to update the weights
-        self._optimizer.step()
-
-        # grab loss for later statistics
-        self._losses.append( _loss.item() )
+            print( 'WARNING> tried training a non-trainable model' )
+        else :
+            _aa = torch.from_numpy( actions ).unsqueeze( 1 ).to( self._device )
+            _xx = torch.from_numpy( states ).float().to( self._device )
+            _yy = torch.from_numpy( targets ).float().unsqueeze( 1 ).to( self._device )
+    
+            # reset the gradients buffer
+            self._optimizer.zero_grad()
+    
+            # do forward pass to compute q-target predictions
+            _yyhat = self._nnetwork.forward( _xx ).gather( 1, _aa )
+    
+            ## set_trace()
+    
+            # and compute loss and gradients
+            _loss = self._lossFcn( _yyhat, _yy )
+            _loss.backward()
+    
+            # run optimizer to update the weights
+            self._optimizer.step()
+    
+            # grab loss for later statistics
+            self._losses.append( _loss.item() )
 
     def clone( self, other, tau = 1.0 ) :
         self._nnetwork.clone( other._nnetwork, tau )

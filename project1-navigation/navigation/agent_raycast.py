@@ -15,7 +15,7 @@ class DqnBananaRaycastAgent( agent.IDqnAgent ) :
         """Default preprocessing by just copying the data
 
         Args:
-            rawState (np.ndarray) : raw state from lunar lander environment
+            rawState (np.ndarray) : raw state from banana environment
 
         Returns:
             np.ndarray : copy of the gym-env. observation for the model

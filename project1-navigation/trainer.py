@@ -22,11 +22,12 @@ from navigation import agent_gridworld
 
 # import model builder functionality (pytorch as backend)
 from navigation import model_pytorch
+from navigation import model_tensorflow
 
 from IPython.core.debugger import set_trace
 
 GRIDWORLD = False
-TEST = False
+TEST = True
 
 # @DEBUG: test method for gridworld --------------------------------------------
 def plotQTable( envGridworld, agentGridworld ) :
@@ -132,10 +133,18 @@ def test( env, agent ) :
         _progressbar.set_description( 'Testing> Score=%.2f' % ( _score ) )
         _progressbar.refresh()
 
-def experiment( savefile ) :
+def experiment( library, savefile ) :
     # paths to the environment executables
     _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
     _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
+
+    # grab factory-method for the model according to the library requested
+    _modelBuilder = model_pytorch.DqnModelBuilder if library == 'pytorch' \
+                        else model_tensorflow.DqnModelBuilder
+
+    # grab initialization-method for the model according to the library requested
+    _backendInitializer = model_pytorch.BackendInitializer if library == 'pytorch' \
+                            else model_tensorflow.BackendInitializer
 
     if not GRIDWORLD :
         # instantiate the environment
@@ -144,8 +153,8 @@ def experiment( savefile ) :
         # instantiate the agent
         _agent = agent_raycast.CreateAgent( agent_raycast.AGENT_CONFIG,
                                             agent_raycast.MODEL_CONFIG,
-                                            model_pytorch.DqnModelBuilder,
-                                            model_pytorch.BackendInitializer )
+                                            _modelBuilder,
+                                            _backendInitializer )
     else :
         # @DEBUG: gridworld test environment------------------------------------
         _env = gridworld.GridWorldEnv( gridworld.BOOK_LAYOUT, # DEFAULT_LAYOUT
@@ -164,8 +173,8 @@ def experiment( savefile ) :
 
         _agent = agent_gridworld.CreateAgent( agent_gridworld.AGENT_CONFIG,
                                               agent_gridworld.MODEL_CONFIG,
-                                              model_pytorch.DqnModelBuilder,
-                                              model_pytorch.BackendInitializer )
+                                              _modelBuilder,
+                                              _backendInitializer )
 
         # ----------------------------------------------------------------------
 
@@ -177,8 +186,16 @@ def experiment( savefile ) :
 
 if __name__ == '__main__' :
     _parser = argparse.ArgumentParser()
-    _parser.add_argument( '--filename', help='file to save|load the model', type=str, default='banana_model_weights.pth' )
+    _parser.add_argument( '--library', 
+                          help = 'deep learning library to use (pytorch|tensorflow)', 
+                          type = str, 
+                          choices = [ 'pytorch','tensorflow' ], 
+                          default = 'pytorch' )
+    _parser.add_argument( '--filename', 
+                          help = 'file to save|load the model', 
+                          type = str, 
+                          default = 'banana_model_weights.pth' )
 
     _args = _parser.parse_args()
 
-    experiment( _args.filename )
+    experiment( _args.library, _args.filename )
