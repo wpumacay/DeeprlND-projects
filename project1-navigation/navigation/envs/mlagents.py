@@ -79,8 +79,8 @@ class SingleAgentDiscreteActionsEnv( IUnityEnvWrapper ) :
     def numActions( self ) :
         return self._uNumActions
 
-def createDiscreteActionsEnv( executableFullPath, envType = 'single' ) :
-    _unityEnv = UnityEnvironment( executableFullPath )
+def createDiscreteActionsEnv( executableFullPath, envType = 'single', seed = 0 ) :
+    _unityEnv = UnityEnvironment( executableFullPath, seed = seed )
 
     if envType == 'single' :
         return SingleAgentDiscreteActionsEnv( _unityEnv, executableFullPath )

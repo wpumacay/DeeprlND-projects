@@ -41,9 +41,6 @@ class DqnModelTensorflow( model.IDqnModel ) :
     def __init__( self, name, modelConfig, trainable ) :
         super( DqnModelTensorflow, self ).__init__( name, modelConfig, trainable )
 
-        # to save the losses for later review
-        self._losses = deque( maxlen = 100 )
-
     def build( self ) :
         # placeholder for state inputs
         self._tfStates = tf.placeholder( tf.float32, (None,) + self._inputShape )
@@ -73,7 +70,14 @@ class DqnModelTensorflow( model.IDqnModel ) :
             self._opLoss = tf.losses.mean_squared_error( self._tfQTargets, self._opQhat_sa )
     
             # create ops for the loss and optimizer
-            self._opOptim = tf.train.AdamOptimizer( learning_rate = self._lr ).minimize( self._opLoss, var_list = self._nnetwork.trainable_weights )
+            self._optimizer = tf.train.AdamOptimizer( learning_rate = self._lr )
+            self._opOptim = self._optimizer.minimize( self._opLoss, var_list = self._nnetwork.trainable_weights )
+
+            # op for gradients computation
+            self._opComputeGradients = self._optimizer.compute_gradients( self._opLoss )
+
+            # op for bellman errors computation
+            self._opComputeBellmanErrors = tf.abs( self._tfQTargets - self._opQhat_sa )
 
         # tf.Session, passed by the backend-initializer
         self._sess = None
@@ -93,11 +97,51 @@ class DqnModelTensorflow( model.IDqnModel ) :
         if not self._trainable :
             print( 'WARNING> tried training a non-trainable model' )
         else :
-            _, _loss = self._sess.run( [ self._opOptim, self._opLoss ],
-                                       feed_dict = { self._tfStates : states,
-                                                     self._tfActions : actions,
-                                                     self._tfActionsIndices : np.arange( actions.shape[0] ),
-                                                     self._tfQTargets : targets } )
+            # for gather functionality
+            _actionsIndices = np.arange( actions.shape[0] )
+            # dictionary to feed to placeholders
+            _feedDict = { self._tfStates : states,
+                          self._tfActions : actions,
+                          self._tfActionsIndices : _actionsIndices,
+                          self._tfQTargets : targets }
+
+            if self._saveGradients and self._saveBellmanErrors :
+                # ops to run (as extra, need gradients and bellman erros)
+                _ops = [ self._opOptim, self._opLoss, self._opComputeGradients, self._opComputeBellmanErrors ]
+
+                # run the session
+                _, _loss, _gradients, _bellmanErrors = self._sess.run( _ops, _feedDict )
+
+                # grab the bounty
+                set_trace()
+                self._gradients.append( _gradients )
+                self._bellmanErrors.append( _bellmanErrors )
+
+            elif self._saveGradients :
+                # ops to run (as extra, need gradients only)
+                _ops = [ self._opOptim, self._opLoss, self._opComputeGradients ]
+
+                # run the session
+                _, _loss, _gradients = self._sess.run( _ops, _feedDict )
+
+                # grab the bounty
+                self._gradients.append( _gradients )
+
+            elif self._saveBellmanErrors :
+                # ops to run (as extra, need bellmanErrors only)
+                _ops = [ self._opOptim, self._opLoss, self._opComputeBellmanErrors ]
+
+                # run the session
+                _, _loss, _bellmanErrors = self._sess.run( _ops, _feedDict )
+
+                self._bellmanErrors.append( _bellmanErrors )
+
+            else :
+                # ops to run (no stats required here)
+                _ops = [ self._opOptim, self._opLoss ]
+
+                # run the session
+                _, _loss = self._sess.run( _ops, _feedDict )
     
             # grab loss for later statistics
             self._losses.append( _loss )

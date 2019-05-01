@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import argparse
+import time
 from tqdm import tqdm
 from collections import deque
 from collections import defaultdict
@@ -26,8 +27,14 @@ from navigation import model_tensorflow
 
 from IPython.core.debugger import set_trace
 
+# logging functionality
+import logger
+
 GRIDWORLD = False
 TEST = True
+TIME_START = 0
+RESULTS_FOLDER = 'results'
+SEED = 0
 
 # @DEBUG: test method for gridworld --------------------------------------------
 def plotQTable( envGridworld, agentGridworld ) :
@@ -44,7 +51,7 @@ def plotQTable( envGridworld, agentGridworld ) :
 
 # ------------------------------------------------------------------------------
 
-def train( env, agent, savefile ) :
+def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
     MAX_EPISODES = agent.learningMaxSteps
     MAX_STEPS_EPISODE = 1000
     LOG_WINDOW_SIZE = 100
@@ -53,7 +60,10 @@ def train( env, agent, savefile ) :
     _maxAvgScore = -np.inf
     _scoresWindow = deque( maxlen = LOG_WINDOW_SIZE )
     _scores = []
+    _scoresAvgs = []
     _stepsWindow = deque( maxlen = LOG_WINDOW_SIZE )
+
+    _timeStart = TIME_START
 
     for iepisode in _progressbar :
 
@@ -87,6 +97,9 @@ def train( env, agent, savefile ) :
         if iepisode >= LOG_WINDOW_SIZE :
             _avgScore = np.mean( _scoresWindow )
             _avgSteps = np.mean( _stepsWindow )
+
+            _scoresAvgs.append( _avgScore )
+
             if _avgScore > _maxAvgScore :
                 _maxAvgScore = _avgScore
 
@@ -102,8 +115,33 @@ def train( env, agent, savefile ) :
         _ = input( 'Press ENTER to continue ...' )
         # --------------------------------------------------------------------------
     else :
-        if savefile is not None :
-            agent.save( savefile )
+        # save trained model
+        agent.save( savefile )
+
+        _timeStop = int( time.time() )
+        _trainingTime = _timeStop - _timeStart
+
+        # save training results for later visualization and analysis
+        logger.saveTrainingResults( resultsFilename,
+                                    sessionId,
+                                    _timeStart,
+                                    _scores,
+                                    _scoresAvgs,
+                                    agent.actorModel.losses,
+                                    agent.actorModel.bellmanErrors,
+                                    agent.actorModel.gradients )
+
+        # save replay batch for later visualization and analysis
+        _ss, _aa, _rr, _ssnext, _ = agent.replayBuffer.sample( 100 )
+        _q_s_batch = [ agent.actorModel.eval( agent._preprocess( state ) ) \
+                       for state in _ss ]
+        _replayBatch = { 'states' : _ss, 'actions' : _aa, 'rewards' : _rr, 'nextStates' : _ssnext }
+
+        logger.saveReplayBatch( replayFilename,
+                                sessionId,
+                                TIME_START,
+                                _replayBatch,
+                                _q_s_batch )
 
 def test( env, agent ) :
     _progressbar = tqdm( range( 1, 10 + 1 ), desc = 'Testing>', leave = True )
@@ -133,7 +171,7 @@ def test( env, agent ) :
         _progressbar.set_description( 'Testing> Score=%.2f' % ( _score ) )
         _progressbar.refresh()
 
-def experiment( library, savefile ) :
+def experiment( sessionId, library, savefile, resultsFilename, replayFilename ) :
     # paths to the environment executables
     _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
     _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
@@ -148,7 +186,10 @@ def experiment( library, savefile ) :
 
     if not GRIDWORLD :
         # instantiate the environment
-        _env = mlagents.createDiscreteActionsEnv( _bananaExecPath )
+        _env = mlagents.createDiscreteActionsEnv( _bananaExecPath, seed = SEED )
+
+        # set the seed for the agent
+        agent_raycast.AGENT_CONFIG.seed = SEED
 
         # instantiate the agent
         _agent = agent_raycast.CreateAgent( agent_raycast.AGENT_CONFIG,
@@ -179,23 +220,69 @@ def experiment( library, savefile ) :
         # ----------------------------------------------------------------------
 
     if not TEST :
-        train( _env, _agent, savefile )
+        train( _env, _agent, sessionId, savefile, resultsFilename, replayFilename )
     else :
-        _agent.load( savefile )
+        _agent.load( _savefile )
         test( _env, _agent )
 
 if __name__ == '__main__' :
     _parser = argparse.ArgumentParser()
+    _parser.add_argument( 'mode',
+                          help = 'mode of execution (train|test)',
+                          type = str,
+                          choices = [ 'train', 'test' ] )
     _parser.add_argument( '--library', 
                           help = 'deep learning library to use (pytorch|tensorflow)', 
                           type = str, 
                           choices = [ 'pytorch','tensorflow' ], 
                           default = 'pytorch' )
-    _parser.add_argument( '--filename', 
-                          help = 'file to save|load the model', 
+    _parser.add_argument( '--sessionId', 
+                          help = 'identifier of this training run', 
                           type = str, 
-                          default = 'banana_model_weights.pth' )
+                          default = 'banana_simple' )
+    _parser.add_argument( '--seed',
+                          help = 'random seed for the environment and generators',
+                          type = int,
+                          default = 0 )
 
     _args = _parser.parse_args()
 
-    experiment( _args.library, _args.filename )
+    TEST = ( _args.mode == 'test' )
+    SEED = _args.seed
+    TIME_START = int( time.time() )
+
+    _sessionfolder = os.path.join( RESULTS_FOLDER, _args.sessionId )
+    if not os.path.exists( _sessionfolder ) :
+        os.makedirs( _sessionfolder )
+
+    _savefile = _args.sessionId
+    _savefile += '_model'
+    _savefile += _args.library
+    _savefile += '_' + ( '.pth' if _args.library == 'pytorch' else '.h5' )
+    _savefile = os.path.join( _sessionfolder, _savefile )
+
+    _resultsFilename = os.path.join( _sessionfolder, 
+                                     _args.sessionId + '_results' + str( TIME_START ) + '.pkl' )
+
+    _replayFilename = os.path.join( _sessionfolder,
+                                    _args.sessionId + '_replay' + str( TIME_START ) + '.pkl' )
+
+
+    print( '#############################################################' )
+    print( '#                                                           #' )
+    print( '#            Environment and agent setup                    #' )
+    print( '#                                                           #' )
+    print( '#############################################################' )
+    print( 'Mode            : ', _args.mode )
+    print( 'Library         : ', _args.library )
+    print( 'SessionId       : ', _args.sessionId )
+    print( 'Savefile        : ', _savefile )
+    print( 'ResultsFilename : ', _resultsFilename )
+    print( 'ReplayFilename  : ', _replayFilename )
+    print( '#############################################################' )
+
+    experiment( _args.sessionId, 
+                _args.library,
+                _savefile,
+                _resultsFilename,
+                _replayFilename )

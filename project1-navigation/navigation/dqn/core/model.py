@@ -23,7 +23,23 @@ class IDqnModel( object ) :
         # save learning rate (copied from agent's configuration)
         self._lr = modelConfig._lr
 
+        # losses storage (for learning stats)
+        self._losses = []
+
+        # gradients history
+        self._gradients = []
+
+        # bellman errors
+        self._bellmanErrors = []
+
+        # whether to save the gradients or not
+        self._saveGradients = modelConfig.saveGradients
+
+        # whether to save the bellman errors or not
+        self._saveBellmanErrors = modelConfig.saveBellmanErrors
+
         self.build()
+
         # print configuration just in case
         self._printConfig()
 
@@ -49,12 +65,25 @@ class IDqnModel( object ) :
         raise NotImplementedError( 'IDqnModel::initialize> virtual method' )
 
     @property
+    def losses( self ) :
+        return self._losses
+
+    @property
     def name( self ) :
         return self._name
 
     @property
     def trainable( self ) :
         return self._trainable
+
+    @property
+    def gradients( self ) :
+        return self._gradients
+
+    @property
+    def bellmanErrors( self ) :
+        return self._bellmanErrors
+    
 
     def _printConfig( self ) :
         # Each model could potentially override this with its own extra details

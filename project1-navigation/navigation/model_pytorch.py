@@ -129,7 +129,6 @@ class DqnModelPytorch( model.IDqnModel ) :
         # create train functionality if necessary
         if self._trainable :
             self._lossFcn = nn.MSELoss()
-            self._losses = deque( maxlen = 100 )
             self._optimizer = optim.Adam( self._nnetwork.parameters(), lr = self._lr )
 
     def eval( self, state, inference = False ) :
@@ -167,6 +166,18 @@ class DqnModelPytorch( model.IDqnModel ) :
     
             # grab loss for later statistics
             self._losses.append( _loss.item() )
+
+            if self._saveGradients :
+                # grab gradients for later
+                _params = list( self._nnetwork.parameters() )
+                _gradients = [ _params[i].grad for i in range( len( _params ) ) ]
+                self._gradients.append( _gradients )
+
+            if self._saveBellmanErrors :
+                # grab bellman errors for later
+                with torch.no_grad() :
+                    _bellmanErrors = torch.abs( _yy - _yyhat ).cpu().numpy()
+                    self._bellmanErrors.append( _bellmanErrors )
 
     def clone( self, other, tau = 1.0 ) :
         self._nnetwork.clone( other._nnetwork, tau )

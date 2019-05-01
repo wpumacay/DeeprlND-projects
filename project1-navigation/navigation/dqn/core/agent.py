@@ -204,6 +204,17 @@ class IDqnAgent( object ) :
     def learningMaxSteps( self ) :
         return self._learningMaxSteps
     
+    @property
+    def actorModel( self ) :
+        return self._qmodel_actor
+
+    @property
+    def targetModel( self ) :
+        return self._qmodel_target
+
+    @property
+    def replayBuffer( self ) :
+        return self._rbuffer
 
     def _printConfig( self ) :
         print( '#############################################################' )

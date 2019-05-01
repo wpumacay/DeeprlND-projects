@@ -52,6 +52,8 @@ class DqnModelConfig( object ) :
         # shape of the input tensor for the model
         self.inputShape = ( 4, 84, 84 )
         self.outputShape = ( 18, )
+        self.saveGradients = False
+        self.saveBellmanErrors = False
         self.layers = [ { 'name' : 'conv1' , 'type' : 'conv2d', 'ksize' : 8, 'kstride' : 4, 'nfilters' : 32, 'activation' : 'relu' },
                         { 'name' : 'conv2' , 'type' : 'conv2d', 'ksize' : 4, 'kstride' : 2, 'nfilters' : 64, 'activation' : 'relu' },
                         { 'name' : 'conv3' , 'type' : 'conv2d', 'ksize' : 3, 'kstride' : 1, 'nfilters' : 64, 'activation' : 'relu' },
