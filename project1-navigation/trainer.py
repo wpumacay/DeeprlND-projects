@@ -21,6 +21,9 @@ from navigation import agent_raycast
 # @DEBUG: gridworl agent for testing
 from navigation import agent_gridworld
 
+# import config utils
+from navigation.dqn.utils import config
+
 # import model builder functionality (pytorch as backend)
 from navigation import model_pytorch
 from navigation import model_tensorflow
@@ -171,7 +174,14 @@ def test( env, agent ) :
         _progressbar.set_description( 'Testing> Score=%.2f' % ( _score ) )
         _progressbar.refresh()
 
-def experiment( sessionId, library, savefile, resultsFilename, replayFilename ) :
+def experiment( sessionId, 
+                library, 
+                savefile, 
+                resultsFilename, 
+                replayFilename, 
+                agentConfigFilename, 
+                modelConfigFilename ) :
+
     # paths to the environment executables
     _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
     _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
@@ -196,6 +206,11 @@ def experiment( sessionId, library, savefile, resultsFilename, replayFilename ) 
                                             agent_raycast.MODEL_CONFIG,
                                             _modelBuilder,
                                             _backendInitializer )
+
+        # save agent and model configurations
+        config.DqnAgentConfig.save( agent_raycast.AGENT_CONFIG, agentConfigFilename )
+        config.DqnModelConfig.save( agent_raycast.MODEL_CONFIG, modelConfigFilename )
+
     else :
         # @DEBUG: gridworld test environment------------------------------------
         _env = gridworld.GridWorldEnv( gridworld.BOOK_LAYOUT, # DEFAULT_LAYOUT
@@ -267,22 +282,28 @@ if __name__ == '__main__' :
     _replayFilename = os.path.join( _sessionfolder,
                                     _args.sessionId + '_replay.pkl' )
 
+    _agentConfigFilename = os.path.join( _sessionfolder, _args.sessionId + '_agentconfig.json' )
+    _modelConfigFilename = os.path.join( _sessionfolder, _args.sessionId + '_modelconfig.json' )
 
     print( '#############################################################' )
     print( '#                                                           #' )
     print( '#            Environment and agent setup                    #' )
     print( '#                                                           #' )
     print( '#############################################################' )
-    print( 'Mode            : ', _args.mode )
-    print( 'Library         : ', _args.library )
-    print( 'SessionId       : ', _args.sessionId )
-    print( 'Savefile        : ', _savefile )
-    print( 'ResultsFilename : ', _resultsFilename )
-    print( 'ReplayFilename  : ', _replayFilename )
+    print( 'Mode                : ', _args.mode )
+    print( 'Library             : ', _args.library )
+    print( 'SessionId           : ', _args.sessionId )
+    print( 'Savefile            : ', _savefile )
+    print( 'ResultsFilename     : ', _resultsFilename )
+    print( 'ReplayFilename      : ', _replayFilename )
+    print( 'AgentConfigFilename : ', _agentConfigFilename )
+    print( 'ModelConfigFilename : ', _modelConfigFilename )
     print( '#############################################################' )
 
     experiment( _args.sessionId, 
                 _args.library,
                 _savefile,
                 _resultsFilename,
-                _replayFilename )
+                _replayFilename,
+                _agentConfigFilename,
+                _modelConfigFilename )
