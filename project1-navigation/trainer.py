@@ -39,6 +39,10 @@ TIME_START = 0
 RESULTS_FOLDER = 'results'
 SEED = 0
 
+USE_DOUBLE_DQN = False
+USE_PRIORITIZED_EXPERIENCE_REPLAY = False
+USE_DUELING_DQN = False
+
 # @DEBUG: test method for gridworld --------------------------------------------
 def plotQTable( envGridworld, agentGridworld ) :
     plt.ion()
@@ -182,10 +186,6 @@ def experiment( sessionId,
                 agentConfigFilename, 
                 modelConfigFilename ) :
 
-    # paths to the environment executables
-    _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
-    _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
-
     # grab factory-method for the model according to the library requested
     _modelBuilder = model_pytorch.DqnModelBuilder if library == 'pytorch' \
                         else model_tensorflow.DqnModelBuilder
@@ -195,11 +195,20 @@ def experiment( sessionId,
                             else model_tensorflow.BackendInitializer
 
     if not GRIDWORLD :
+        # paths to the environment executables
+        _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
+        _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
+
         # instantiate the environment
         _env = mlagents.createDiscreteActionsEnv( _bananaExecPath, seed = SEED )
 
         # set the seed for the agent
         agent_raycast.AGENT_CONFIG.seed = SEED
+
+        # set improvement flags
+        agent_raycast.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+        agent_raycast.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+        agent_raycast.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
 
         # instantiate the agent
         _agent = agent_raycast.CreateAgent( agent_raycast.AGENT_CONFIG,
@@ -226,6 +235,11 @@ def experiment( sessionId,
     
         agent_gridworld.MODEL_CONFIG.inputShape   = ( _env.nS, )
         agent_gridworld.MODEL_CONFIG.outputShape  = ( _env.nA, )
+
+        # set improvement flags
+        agent_gridworld.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+        agent_gridworld.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+        agent_gridworld.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
 
         _agent = agent_gridworld.CreateAgent( agent_gridworld.AGENT_CONFIG,
                                               agent_gridworld.MODEL_CONFIG,
@@ -259,8 +273,26 @@ if __name__ == '__main__' :
                           help = 'random seed for the environment and generators',
                           type = int,
                           default = 0 )
+    _parser.add_argument( '--gridworld',
+                          help = 'whether or not to test the implementation in a gridworld env.',
+                          type = str,
+                          default = 'false' )
+    _parser.add_argument( '--ddqn',
+                          help = 'whether or not to use double dqn (true|false)',
+                          type = str,
+                          default = 'false' )
+    _parser.add_argument( '--prioritizedExpReplay',
+                          help = 'whether or not to use prioritized experience replay (true|false)',
+                          type = str,
+                          default = 'false' )
+    _parser.add_argument( '--duelingDqn',
+                          help = 'whether or not to use dueling dqn (true|false)',
+                          type = str,
+                          default = 'false' )
 
     _args = _parser.parse_args()
+
+    GRIDWORLD = ( _args.gridworld.lower() == 'true' )
 
     TEST = ( _args.mode == 'test' )
     SEED = _args.seed
@@ -285,19 +317,27 @@ if __name__ == '__main__' :
     _agentConfigFilename = os.path.join( _sessionfolder, _args.sessionId + '_agentconfig.json' )
     _modelConfigFilename = os.path.join( _sessionfolder, _args.sessionId + '_modelconfig.json' )
 
+    USE_DOUBLE_DQN                      = ( _args.ddqn.lower() == 'true' )
+    USE_PRIORITIZED_EXPERIENCE_REPLAY   = ( _args.prioritizedExpReplay.lower() == 'true' )
+    USE_DUELING_DQN                     = ( _args.duelingDqn.lower() == 'true' )
+
     print( '#############################################################' )
     print( '#                                                           #' )
     print( '#            Environment and agent setup                    #' )
     print( '#                                                           #' )
     print( '#############################################################' )
-    print( 'Mode                : ', _args.mode )
-    print( 'Library             : ', _args.library )
-    print( 'SessionId           : ', _args.sessionId )
-    print( 'Savefile            : ', _savefile )
-    print( 'ResultsFilename     : ', _resultsFilename )
-    print( 'ReplayFilename      : ', _replayFilename )
-    print( 'AgentConfigFilename : ', _agentConfigFilename )
-    print( 'ModelConfigFilename : ', _modelConfigFilename )
+    print( 'Mode                    : ', _args.mode )
+    print( 'Library                 : ', _args.library )
+    print( 'SessionId               : ', _args.sessionId )
+    print( 'Savefile                : ', _savefile )
+    print( 'ResultsFilename         : ', _resultsFilename )
+    print( 'ReplayFilename          : ', _replayFilename )
+    print( 'AgentConfigFilename     : ', _agentConfigFilename )
+    print( 'ModelConfigFilename     : ', _modelConfigFilename )
+    print( 'Gridworld               : ', _args.gridworld )
+    print( 'DoubleDqn               : ', _args.ddqn )
+    print( 'PrioritizedExpReplay    : ', _args.prioritizedExpReplay )
+    print( 'DuelingDqn              : ', _args.duelingDqn )
     print( '#############################################################' )
 
     experiment( _args.sessionId, 

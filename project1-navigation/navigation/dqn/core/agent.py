@@ -80,6 +80,11 @@ class IDqnAgent( object ) :
         self._currState = None
         self._nextState = None
 
+        # improvements to dqn
+        self._useDoubleDqn               = agentConfig.useDoubleDqn
+        self._usePrioritizedExpReplay    = agentConfig.usePrioritizedExpReplay
+        self._useDuelingDqn              = agentConfig.useDuelingDqn
+
         self._printConfig();
 
     def save( self, filename ) :
@@ -185,8 +190,37 @@ class IDqnAgent( object ) :
         #         here, nor take them as part of the computation graph).
         #         Basically the targets are like training data from a 'dataset'.
 
-        _qtargets = _rewards + ( 1 - _dones ) * self._gamma * \
-                    np.max( self._qmodel_target.eval( _nextStates ), 1 )
+        _qtargets = None
+        if self._useDoubleDqn :
+            # targets are computed in the following way
+            #
+            # 
+            # q-target = r + gamma * Q( s', argmax( Q(s',a';theta) ); theta )
+            #                        ^         a'               actor     target
+            #                        |
+            #                        |              ^
+            #     qvalue from target model          |
+            #                                       |
+            #                             greedy action from actor model
+
+            # compute qvalues from both actorModel and targetModel
+            _qvals_actorModel_s   = self._qmodel_actor.eval( _nextStates )
+            _qvals_targetModel_s  = self._qmodel_target.eval( _nextStates )
+
+            # greedy actions
+            _argmaxActions = np.argmax( _qvals_actorModel_s, 1 ).reshape( -1, 1 )
+
+            # compute qtargets from the qvals of target network, ...
+            # using greedy actions from the actor network
+            _qtargets = _rewards + ( 1 - _dones ) * self._gamma * \
+                        np.squeeze( np.take_along_axis( _qvals_targetModel_s, _argmaxActions, axis = 1 ) )
+
+            ## set_trace()
+        else :
+            # targets are just computing the target network
+            _qtargets = _rewards + ( 1 - _dones ) * self._gamma * \
+                        np.max( self._qmodel_target.eval( _nextStates ), 1 )
+
         _qtargets = _qtargets.astype( np.float32 )
 
         # make the learning call to the model (kind of like supervised setting)

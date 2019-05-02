@@ -41,6 +41,11 @@ class DqnAgentConfig( object ) :
         # random seed
         self.seed = 1
 
+        # improvements to dqn
+        self.useDoubleDqn = False
+        self.usePrioritizedExpReplay = False
+        self.useDuelingDqn = False
+
     def serialize( self ) :
         _dataDict = {}
 
@@ -60,6 +65,9 @@ class DqnAgentConfig( object ) :
         _dataDict['replayBufferSize']           = self.replayBufferSize
         _dataDict['discount']                   = self.discount
         _dataDict['seed']                       = self.seed
+        _dataDict['useDoubleDqn']               = self.useDoubleDqn
+        _dataDict['usePrioritizedExpReplay']    = self.usePrioritizedExpReplay
+        _dataDict['useDuelingDqn']              = self.useDuelingDqn
 
         return _dataDict
 
@@ -76,22 +84,25 @@ class DqnAgentConfig( object ) :
         _config = DqnAgentConfig()
 
         # @TODO: Change to a simpler way (using **dataDict as kwargs to constructor)
-        _config.stateDim                   = _dataDict['stateDim']
-        _config.nActions                   = _dataDict['nActions']
-        _config.epsilonStart               = _dataDict['epsilonStart']
-        _config.epsilonEnd                 = _dataDict['epsilonEnd']
-        _config.epsilonSteps               = _dataDict['epsilonSteps']
-        _config.epsilonDecay               = _dataDict['epsilonDecay']
-        _config.epsilonSchedule            = _dataDict['epsilonSchedule']
-        _config.lr                         = _dataDict['lr']
-        _config.minibatchSize              = _dataDict['minibatchSize']
-        _config.learningStartsAt           = _dataDict['learningStartsAt']
-        _config.learningUpdateFreq         = _dataDict['learningUpdateFreq']
-        _config.learningUpdateTargetFreq   = _dataDict['learningUpdateTargetFreq']
-        _config.learningMaxSteps           = _dataDict['learningMaxSteps']
-        _config.replayBufferSize           = _dataDict['replayBufferSize']
-        _config.discount                   = _dataDict['discount']
-        _config.seed                       = _dataDict['seed']
+        _config.stateDim                    = _dataDict['stateDim']
+        _config.nActions                    = _dataDict['nActions']
+        _config.epsilonStart                = _dataDict['epsilonStart']
+        _config.epsilonEnd                  = _dataDict['epsilonEnd']
+        _config.epsilonSteps                = _dataDict['epsilonSteps']
+        _config.epsilonDecay                = _dataDict['epsilonDecay']
+        _config.epsilonSchedule             = _dataDict['epsilonSchedule']
+        _config.lr                          = _dataDict['lr']
+        _config.minibatchSize               = _dataDict['minibatchSize']
+        _config.learningStartsAt            = _dataDict['learningStartsAt']
+        _config.learningUpdateFreq          = _dataDict['learningUpdateFreq']
+        _config.learningUpdateTargetFreq    = _dataDict['learningUpdateTargetFreq']
+        _config.learningMaxSteps            = _dataDict['learningMaxSteps']
+        _config.replayBufferSize            = _dataDict['replayBufferSize']
+        _config.discount                    = _dataDict['discount']
+        _config.seed                        = _dataDict['seed']
+        _config.useDoubleDqn                = _dataDict['useDoubleDqn']
+        _config.usePrioritizedExpReplay     = _dataDict['usePrioritizedExpReplay']
+        _config.useDuelingDqn               = _dataDict['useDuelingDqn']
 
         return _config
 

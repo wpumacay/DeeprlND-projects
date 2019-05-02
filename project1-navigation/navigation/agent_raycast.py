@@ -45,7 +45,7 @@ MODEL_CONFIG = config.DqnModelConfig()
 MODEL_CONFIG.inputShape = (37,)
 MODEL_CONFIG.outputShape = (4,)
 MODEL_CONFIG.saveGradients = False # no gradients for now (for tf filesize is huge)
-MODEL_CONFIG.saveBellmanErrors = True
+MODEL_CONFIG.saveBellmanErrors = False
 MODEL_CONFIG.layers = [ { 'name': 'fc1', 'type' : 'fc', 'units' : 128, 'activation' : 'relu' },
                         { 'name': 'fc2', 'type' : 'fc', 'units' : 64, 'activation' : 'relu' },
                         { 'name': 'fc3', 'type' : 'fc', 'units' : 16, 'activation' : 'relu' },
