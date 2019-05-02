@@ -256,16 +256,16 @@ if __name__ == '__main__' :
         os.makedirs( _sessionfolder )
 
     _savefile = _args.sessionId
-    _savefile += '_model'
+    _savefile += '_model_'
     _savefile += _args.library
-    _savefile += '_' + ( '.pth' if _args.library == 'pytorch' else '.h5' )
+    _savefile += ( '.pth' if _args.library == 'pytorch' else '.h5' )
     _savefile = os.path.join( _sessionfolder, _savefile )
 
     _resultsFilename = os.path.join( _sessionfolder, 
-                                     _args.sessionId + '_results' + str( TIME_START ) + '.pkl' )
+                                     _args.sessionId + '_results.pkl' )
 
     _replayFilename = os.path.join( _sessionfolder,
-                                    _args.sessionId + '_replay' + str( TIME_START ) + '.pkl' )
+                                    _args.sessionId + '_replay.pkl' )
 
 
     print( '#############################################################' )
