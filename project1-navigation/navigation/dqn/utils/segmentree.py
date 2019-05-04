@@ -54,6 +54,9 @@ class SegmenTree( object ) :
         # position pointer in the buffer
         self._pos = 0
 
+        # a flag to indicate the buffer has been filled
+        self._filled = False
+
     def add( self, data, nodeval ) :
         """Adds a node with internal data 'data' and node value 'nodeval'
     
@@ -72,7 +75,10 @@ class SegmenTree( object ) :
         self.update( _indx, nodeval )
 
         # move the pointer to the next appropriate position
-        self._pos = ( self._pos + 1 ) % self._bufferSize
+        self._pos += 1
+        if self._pos >= self._bufferSize :
+            self._pos = 0
+            self._filled = True # indicates that the buffer has been filled
 
 
     def update( self, index, nodeval ) :
@@ -135,6 +141,12 @@ class SumTree( SegmenTree ) :
         
         # search recursively in the tree
         _indx = self._retrieve( 0, value )
+
+        # check if not filled and got to last valid element
+        if not self._filled :
+            _lastIndx = ( self._pos - 1 ) + self._bufferSize - 1
+            if _indx > _lastIndx :
+                _indx = _lastIndx
 
         # for this index, grab the corresponding index in the data buffer
         _dataIndx = _indx - self._bufferSize + 1

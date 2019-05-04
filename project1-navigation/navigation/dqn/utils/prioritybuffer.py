@@ -119,6 +119,7 @@ class PriorityBuffer( object ) :
             # left and right ticks of the segments
             _a = _prioritySegSize * i
             _b = _prioritySegSize * ( i + 1 )
+            ## _b = min( _prioritySegSize * ( i + 1 ), self._sumtree.sum() - 1e-5 )
 
             # throw the dice over this segment
             _v = np.random.uniform( _a, _b )
@@ -161,11 +162,11 @@ class PriorityBuffer( object ) :
             _impSampWeightsBatch.append( _impSampWeight )
 
         # stack each experience component along batch axis
-        _states = np.stack( [ _exp.state for _exp in _expBatch if _exp is not None ] )
-        _actions = np.stack( [ _exp.action for _exp in _expBatch if _exp is not None ] )
-        _rewards = np.stack( [ _exp.reward for _exp in _expBatch if _exp is not None ] )
-        _nextStates = np.stack( [ _exp.nextState for _exp in _expBatch if _exp is not None ] )
-        _endFlags = np.stack( [ _exp.endFlag for _exp in _expBatch if _exp is not None ] ).astype( np.uint8 )
+        _states = np.stack( [ exp.state for exp in _expBatch if exp is not None ] )
+        _actions = np.stack( [ exp.action for exp in _expBatch if exp is not None ] )
+        _rewards = np.stack( [ exp.reward for exp in _expBatch if exp is not None ] )
+        _nextStates = np.stack( [ exp.nextState for exp in _expBatch if exp is not None ] )
+        _endFlags = np.stack( [ exp.endFlag for exp in _expBatch if exp is not None ] ).astype( np.uint8 )
 
         # convert indices and importance sampling weights to numpy-friendly data
         _indicesBatch = np.array( _indicesBatch ).astype( np.int64 )
@@ -198,7 +199,7 @@ class PriorityBuffer( object ) :
             # update the max priority
             self._maxpriority = max( _priorities[i], self._maxpriority )
 
-        
+
 
     def __len__( self ) :
         return self._count
