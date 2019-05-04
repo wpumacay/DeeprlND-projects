@@ -141,7 +141,8 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
                                     agent.actorModel.gradients )
 
         # save replay batch for later visualization and analysis
-        _ss, _aa, _rr, _ssnext, _ = agent.replayBuffer.sample( 100 )
+        _minibatch = agent.replayBuffer.sample( 100 )
+        _ss, _aa, _rr, _ssnext = _minibatch[0], _minibatch[1], _minibatch[2], _minibatch[3]
         _q_s_batch = [ agent.actorModel.eval( agent._preprocess( state ) ) \
                        for state in _ss ]
         _replayBatch = { 'states' : _ss, 'actions' : _aa, 'rewards' : _rr, 'nextStates' : _ssnext }

@@ -234,6 +234,8 @@ class IDqnAgent( object ) :
 
         # make the learning call to the model (kind of like supervised setting)
         if self._usePrioritizedExpReplay :
+            ## if np.sum( _rewards ) > 0. :
+            ##     set_trace()
             # train using also importance sampling weights
             _absBellmanErrors = self._qmodel_actor.train( _states, _actions, _qtargets, _impSampWeights )
             # and update the priorities using the new bellman erros

@@ -46,7 +46,7 @@ class SegmenTree( object ) :
 
         # data used for the tree representation in ...
         # array-like form, kind of similar to a heap
-        self._tree = np.array( [ neutralElement for _ in range( 2 * bufferSize - 1 ) ] )
+        self._tree = np.array( [ neutralElement for _ in range( 2 * bufferSize - 1 ) ], dtype = np.float32 )
 
         # actual buffer of the data (why not list?, perhaps it is just an np array of pointers)
         self._data = np.zeros( bufferSize, dtype = object )

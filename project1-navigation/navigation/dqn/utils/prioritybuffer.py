@@ -40,9 +40,16 @@ class PriorityBuffer( object ) :
         self._mintree = segmentree.MinTree( self._bufferSize )
 
         # a variable to store the running max priority
-        self._maxpriority = 1
+        self._maxpriority = 1.
         # a variable to store the running min priority
         self._minpriority = eps
+
+        # number of "actual" elements in the buffer
+        self._count = 0
+
+        ## # @TEST: Forcing to be equal to no priority
+        ## self._alpha = 0.
+        ## self._eps = 0.
 
         ## # seed random generator (@TODO: What is the behav. with multi-agents?)
         ## random.seed( randomSeed ) # no need to seed this generator. Using seeded np generator
@@ -66,6 +73,9 @@ class PriorityBuffer( object ) :
         # maxpriority is used here, to ensure these tuples can be sampled later
         self._sumtree.add( _expObj, self._maxpriority ** self._alpha )
         self._mintree.add( _expObj, self._maxpriority ** self._alpha )
+
+        # update actual number of elements
+        self._count = min( self._count + 1, self._bufferSize )
 
     def sample( self, batchSize ) :
         """Samples a batch of data using consecutive sampling intervals over the sumtree ranges
@@ -188,8 +198,10 @@ class PriorityBuffer( object ) :
             # update the max priority
             self._maxpriority = max( _priorities[i], self._maxpriority )
 
+        
+
     def __len__( self ) :
-        return len( self._sumtree._data )
+        return self._count
 
     @property
     def alpha( self ) :
