@@ -36,7 +36,7 @@ AGENT_CONFIG.learningStartsAt           = 0
 AGENT_CONFIG.learningUpdateFreq         = 4
 AGENT_CONFIG.learningUpdateTargetFreq   = 4
 AGENT_CONFIG.learningMaxSteps           = 2000
-AGENT_CONFIG.replayBufferSize           = 1000000
+AGENT_CONFIG.replayBufferSize           = int( 2 ** 20 ) # 1048576 ~ 1e6 -> power of 2 for exp. replay
 AGENT_CONFIG.discount                   = 0.999
 AGENT_CONFIG.tau                        = 0.001
 AGENT_CONFIG.seed                       = 0
@@ -45,7 +45,7 @@ MODEL_CONFIG = config.DqnModelConfig()
 MODEL_CONFIG.inputShape = (37,)
 MODEL_CONFIG.outputShape = (4,)
 MODEL_CONFIG.saveGradients = False # no gradients for now (for tf filesize is huge)
-MODEL_CONFIG.saveBellmanErrors = False
+MODEL_CONFIG.saveBellmanErrors = True
 MODEL_CONFIG.layers = [ { 'name': 'fc1', 'type' : 'fc', 'units' : 128, 'activation' : 'relu' },
                         { 'name': 'fc2', 'type' : 'fc', 'units' : 64, 'activation' : 'relu' },
                         { 'name': 'fc3', 'type' : 'fc', 'units' : 16, 'activation' : 'relu' },
