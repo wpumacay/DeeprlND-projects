@@ -112,8 +112,10 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
 
             # log results
             if iepisode % LOG_WINDOW_SIZE == 0 :
-                ## set_trace()
-                _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f, Nsteps=%d' % (_maxAvgScore, _avgScore, _score, agent.epsilon, _nsteps ) )
+                if agent._usePrioritizedExpReplay :
+                    _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f, Beta=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon, agent._rbuffer.beta ) )
+                else :
+                    _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon ) )
                 _progressbar.refresh()
 
     if GRIDWORLD :

@@ -111,7 +111,6 @@ class DqnModelConfig( object ) :
     def __init__( self ) :
         super( DqnModelConfig, self ).__init__()
 
-        # shape of the input tensor for the model
         self.inputShape = ( 4, 84, 84 )
         self.outputShape = ( 18, )
         self.saveGradients = False
@@ -125,6 +124,7 @@ class DqnModelConfig( object ) :
 
         # parameters copied from the agent configuration
         self._lr = 0.00025
+        self._useImpSampling = False # True when using prioritized exp. replay
 
     def serialize( self ) :
         _dataDict = {}
@@ -134,6 +134,7 @@ class DqnModelConfig( object ) :
         _dataDict['saveGradients']      = self.saveGradients
         _dataDict['saveBellmanErrors']  = self.saveBellmanErrors
         _dataDict['layers']             = self.layers
+        _dataDict['useImpSampling']     = self._useImpSampling
 
         return _dataDict
 
@@ -154,5 +155,6 @@ class DqnModelConfig( object ) :
         _config.saveGradients      = _dataDict['saveGradients']
         _config.saveBellmanErrors  = _dataDict['saveBellmanErrors']
         _config.layers             = _dataDict['layers']
+        ## _config._useImpSampling     = _dataDict['useImpSampling'] # wait till all experiments are standard
 
         return _config

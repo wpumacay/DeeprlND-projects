@@ -15,7 +15,7 @@ class PriorityBuffer( object ) :
                   eps = 0.01, 
                   alpha = 0.6, 
                   beta = 0.4,
-                  dbeta = 0.001 ) :
+                  dbeta = 0.00001 ) :
 
         super( PriorityBuffer, self ).__init__()
 
@@ -161,9 +161,12 @@ class PriorityBuffer( object ) :
         _indicesBatch = np.array( _indicesBatch ).astype( np.int64 )
         _impSampWeightsBatch = np.array( _impSampWeightsBatch ).astype( np.float32 )
 
+        # anneal the beta parameter
+        self._beta = min( 1., self._beta + self._dbeta )
+
         return _states, _actions, _nextStates, _rewards, _endFlags, _indicesBatch, _impSampWeightsBatch
 
-    def updatePriorities( self, indices, bellmanErrors ) :
+    def updatePriorities( self, indices, absBellmanErrors ) :
         """Updates the priorities (node-values) of the sumtree with new bellman-errors
 
         Args:
@@ -172,18 +175,18 @@ class PriorityBuffer( object ) :
 
         """
         # sanity-check: indices bath and bellmanErrors batch should be same length
-        assert ( len( indices ) == len( bellmanErrors ) ), \
+        assert ( len( indices ) == len( absBellmanErrors ) ), \
                'ERROR> indices and bellman-errors batch must have same size'
 
         # add the 'e' term to avoid 0s
-        bellmanErrors += self._eps
-        bellmanErrors = np.power( bellmanErrors, self._alpha )
+        _priorities = np.power( absBellmanErrors + self._eps, self._alpha )
 
         for i in range( len( indices ) ) : 
-            # update each node
-            self._sumtree.update( indices[i], bellmanErrors[i] )
+            # update each node in the sumtree and mintree
+            self._sumtree.update( indices[i], _priorities[i] )
+            self._mintree.update( indices[i], _priorities[i] )
             # update the max priority
-            self._maxpriority = max( bellmanErrors[i], self._maxpriority )
+            self._maxpriority = max( _priorities[i], self._maxpriority )
 
     def __len__( self ) :
         return len( self._sumtree._data )

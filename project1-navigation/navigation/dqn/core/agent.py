@@ -3,6 +3,7 @@ import numpy as np
 
 # our helpers
 from navigation.dqn.utils import replaybuffer
+from navigation.dqn.utils import prioritybuffer
 
 # debugging helpers
 from IPython.core.debugger import set_trace
@@ -58,8 +59,14 @@ class IDqnAgent( object ) :
         self._istep = 0
         self._iepisode = 0
 
+        # improvements to dqn
+        self._useDoubleDqn               = agentConfig.useDoubleDqn
+        self._usePrioritizedExpReplay    = agentConfig.usePrioritizedExpReplay
+        self._useDuelingDqn              = agentConfig.useDuelingDqn
+
         # copy some parameters from the agent config into the model config
         modelConfig._lr = self._lr
+        modelConfig._useImpSampling = self._usePrioritizedExpReplay
 
         # create the model accordingly
         self._qmodel_actor = modelBuilder( 'actor_model', modelConfig, True )
@@ -73,17 +80,16 @@ class IDqnAgent( object ) :
         self._qmodel_target.clone( self._qmodel_actor, tau = 1.0 )
 
         # replay buffer
-        self._rbuffer = replaybuffer.DqnReplayBuffer( self._replayBufferSize,
-                                                      self._seed )
+        if self._usePrioritizedExpReplay :
+            self._rbuffer = prioritybuffer.PriorityBuffer( self._replayBufferSize,
+                                                           self._seed )
+        else :
+            self._rbuffer = replaybuffer.DqnReplayBuffer( self._replayBufferSize,
+                                                          self._seed )
 
         # states (current and next) for the model representation
         self._currState = None
         self._nextState = None
-
-        # improvements to dqn
-        self._useDoubleDqn               = agentConfig.useDoubleDqn
-        self._usePrioritizedExpReplay    = agentConfig.usePrioritizedExpReplay
-        self._useDuelingDqn              = agentConfig.useDuelingDqn
 
         self._printConfig();
 
@@ -171,7 +177,10 @@ class IDqnAgent( object ) :
 
         # get a minibatch from the replay buffer
         _minibatch = self._rbuffer.sample( self._minibatchSize )
-        _states, _actions, _nextStates, _rewards, _dones = _minibatch
+        if self._usePrioritizedExpReplay :
+            _states, _actions, _nextStates, _rewards, _dones, _indices, _impSampWeights = _minibatch
+        else :
+            _states, _actions, _nextStates, _rewards, _dones = _minibatch
 
         # compute targets (in a vectorized way). Recall:
         #               
@@ -224,7 +233,14 @@ class IDqnAgent( object ) :
         _qtargets = _qtargets.astype( np.float32 )
 
         # make the learning call to the model (kind of like supervised setting)
-        self._qmodel_actor.train( _states, _actions, _qtargets )
+        if self._usePrioritizedExpReplay :
+            # train using also importance sampling weights
+            _absBellmanErrors = self._qmodel_actor.train( _states, _actions, _qtargets, _impSampWeights )
+            # and update the priorities using the new bellman erros
+            self._rbuffer.updatePriorities( _indices, _absBellmanErrors )
+        else :
+            # train using the normal data required
+            self._qmodel_actor.train( _states, _actions, _qtargets )
 
     @property
     def epsilon( self ) :

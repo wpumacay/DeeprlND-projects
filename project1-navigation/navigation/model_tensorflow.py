@@ -66,8 +66,14 @@ class DqnModelTensorflow( model.IDqnModel ) :
             self._opActionsWithIndices = tf.stack( [self._tfActionsIndices, self._tfActions], axis = 1 )
             self._opQhat_sa = tf.gather_nd( self._opQhat_s, self._opActionsWithIndices )
     
-            # create ops for the loss function
-            self._opLoss = tf.losses.mean_squared_error( self._tfQTargets, self._opQhat_sa )
+            if self._useImpSampling :
+                # create ops for the loss function with importance sampling
+                self._tfImpSamplingWeights = tf.placeholder( tf.float32, (None,) )
+                self._opLoss = tf.reduce_mean( self._tfImpSamplingWeights * 
+                                               tf.squared_difference( self._opQhat_sa, self._tfQTargets ) )
+            else :
+                # create ops for the loss function
+                self._opLoss = tf.losses.mean_squared_error( self._tfQTargets, self._opQhat_sa )
     
             # create ops for the loss and optimizer
             self._optimizer = tf.train.AdamOptimizer( learning_rate = self._lr )
@@ -93,17 +99,29 @@ class DqnModelTensorflow( model.IDqnModel ) :
 
         return _qvalues
 
-    def train( self, states, actions, targets ) :
+    def train( self, states, actions, targets, impSampWeights = None ) :
         if not self._trainable :
             print( 'WARNING> tried training a non-trainable model' )
         else :
             # for gather functionality
             _actionsIndices = np.arange( actions.shape[0] )
             # dictionary to feed to placeholders
-            _feedDict = { self._tfStates : states,
-                          self._tfActions : actions,
-                          self._tfActionsIndices : _actionsIndices,
-                          self._tfQTargets : targets }
+            _feedDict = None
+
+            if self._useImpSampling :
+                assert ( impSampWeights != None ), \
+                       'ERROR> should have passed importance sampling weights'
+
+                _feedDict = { self._tfStates : states,
+                              self._tfActions : actions,
+                              self._tfActionsIndices : _actionsIndices,
+                              self._tfQTargets : targets,
+                              self._tfImpSamplingWeights : impSampWeights }
+            else :
+                _feedDict = { self._tfStates : states,
+                              self._tfActions : actions,
+                              self._tfActionsIndices : _actionsIndices,
+                              self._tfQTargets : targets }
 
             if self._saveGradients and self._saveBellmanErrors :
                 # ops to run (as extra, need gradients and bellman erros)

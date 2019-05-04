@@ -23,6 +23,9 @@ class IDqnModel( object ) :
         # save learning rate (copied from agent's configuration)
         self._lr = modelConfig._lr
 
+        # whether or not use importance sampling on the (yy - yyhat)^2 of the loss
+        self._useImpSampling = modelConfig._useImpSampling
+
         # losses storage (for learning stats)
         self._losses = []
 
@@ -49,7 +52,7 @@ class IDqnModel( object ) :
     def eval( self, state ) :
         raise NotImplementedError( 'IDqnModel::eval> virtual method' )
 
-    def train( self, states, actions, targets ) :
+    def train( self, states, actions, targets, impSampWeights = None ) :
         raise NotImplementedError( 'IDqnModel::train> virtual method' )
 
     def clone( self, other, tau = 1.0 ) :
@@ -75,6 +78,10 @@ class IDqnModel( object ) :
     @property
     def trainable( self ) :
         return self._trainable
+
+    @property
+    def useImpSampling( self ) :
+        return self._useImpSampling
 
     @property
     def gradients( self ) :

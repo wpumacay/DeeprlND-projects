@@ -110,6 +110,10 @@ class NetworkPytorchCustom( nn.Module ) :
         for _thisParams, _otherParams in zip( self.parameters(), other.parameters() ) :
             _thisParams.data.copy_( ( 1. - tau ) * _thisParams.data + ( tau ) * _otherParams.data )
 
+# Just to clarify :
+# yhat -> extimates computed by the network
+# y -> targets passed (like labels in supervised learning)
+
 class DqnModelPytorch( model.IDqnModel ) :
 
     def __init__( self, name, modelConfig, trainable ) :
@@ -128,7 +132,11 @@ class DqnModelPytorch( model.IDqnModel ) :
         self._nnetwork.to( self._device )
         # create train functionality if necessary
         if self._trainable :
-            self._lossFcn = nn.MSELoss()
+            # check whether or not using importance sampling
+            if self._useImpSampling :
+                self._lossFcn = lambda yhat, y, w : torch.mean( w * ( ( y - yhat ) ** 2 ) )
+            else :
+                self._lossFcn = nn.MSELoss()
             self._optimizer = optim.Adam( self._nnetwork.parameters(), lr = self._lr )
 
     def eval( self, state, inference = False ) :
@@ -141,14 +149,15 @@ class DqnModelPytorch( model.IDqnModel ) :
 
         return _qvalues
 
-    def train( self, states, actions, targets ) :
+    def train( self, states, actions, targets, impSampWeights = None ) :
         if not self._trainable :
             print( 'WARNING> tried training a non-trainable model' )
+            return None
         else :
             _aa = torch.from_numpy( actions ).unsqueeze( 1 ).to( self._device )
             _xx = torch.from_numpy( states ).float().to( self._device )
             _yy = torch.from_numpy( targets ).float().unsqueeze( 1 ).to( self._device )
-    
+
             # reset the gradients buffer
             self._optimizer.zero_grad()
     
@@ -158,8 +167,24 @@ class DqnModelPytorch( model.IDqnModel ) :
             ## set_trace()
     
             # and compute loss and gradients
-            _loss = self._lossFcn( _yyhat, _yy )
-            _loss.backward()
+            if self._useImpSampling :
+                assert ( impSampWeights is not None ), \
+                       'ERROR> should have passed importance sampling weights'
+
+                # convert importance sampling weights to tensor
+                _ISWeights = torch.from_numpy( impSampWeights ).float().unsqueeze( 1 ).to( self._device )
+
+                # make a custom mse loss weighted using the importance samples weights
+                _loss = self._lossFcn( _yyhat, _yy, _ISWeights )
+                _loss.backward()
+            else :
+                # do the normal loss computation and backward pass
+                _loss = self._lossFcn( _yyhat, _yy )
+                _loss.backward()
+
+            # compute bellman errors (either for saving or for prioritized exp. replay)
+            with torch.no_grad() :
+                _absBellmanErrors = torch.abs( _yy - _yyhat ).cpu().numpy()
     
             # run optimizer to update the weights
             self._optimizer.step()
@@ -174,10 +199,9 @@ class DqnModelPytorch( model.IDqnModel ) :
                 self._gradients.append( _gradients )
 
             if self._saveBellmanErrors :
-                # grab bellman errors for later
-                with torch.no_grad() :
-                    _bellmanErrors = torch.abs( _yy - _yyhat ).cpu().numpy()
-                    self._bellmanErrors.append( _bellmanErrors )
+                self._bellmanErrors.append( _absBellmanErrors )
+
+            return _absBellmanErrors
 
     def clone( self, other, tau = 1.0 ) :
         self._nnetwork.clone( other._nnetwork, tau )
