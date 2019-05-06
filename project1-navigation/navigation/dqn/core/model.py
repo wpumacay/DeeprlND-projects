@@ -26,6 +26,9 @@ class IDqnModel( object ) :
         # whether or not use importance sampling on the (yy - yyhat)^2 of the loss
         self._useImpSampling = modelConfig._useImpSampling
 
+        # whether or not to use a model for visual observations
+        self._useConvolutionalBasedModel = modelConfig._useConvolutionalBasedModel
+
         # losses storage (for learning stats)
         self._losses = []
 
@@ -100,9 +103,11 @@ class IDqnModel( object ) :
         print( '#                                                           #' )
         print( '#############################################################' )
 
-        print( 'model name          : ', self._name )
-        print( 'input shape         : ', self._inputShape )
-        print( 'output shape        : ', self._outputShape )
-        print( 'learning rate       : ', self._lr )
+        print( 'model name              : ', self._name )
+        print( 'input shape             : ', self._inputShape )
+        print( 'output shape            : ', self._outputShape )
+        print( 'learning rate           : ', self._lr )
+        print( 'use importance sampling : ', self._useImpSampling )
+        print( 'use conv-based model    : ', self._useConvolutionalBasedModel )
 
         print( '#############################################################' )

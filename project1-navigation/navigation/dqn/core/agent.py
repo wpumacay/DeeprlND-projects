@@ -59,6 +59,9 @@ class IDqnAgent( object ) :
         self._istep = 0
         self._iepisode = 0
 
+        # whether or not using a convolutional-based model
+        self._useConvolutionalBasedModel = agentConfig.useConvolutionalBasedModel
+
         # improvements to dqn
         self._useDoubleDqn               = agentConfig.useDoubleDqn
         self._usePrioritizedExpReplay    = agentConfig.usePrioritizedExpReplay
@@ -67,6 +70,7 @@ class IDqnAgent( object ) :
         # copy some parameters from the agent config into the model config
         modelConfig._lr = self._lr
         modelConfig._useImpSampling = self._usePrioritizedExpReplay
+        modelConfig._useConvolutionalBasedModel = self._useConvolutionalBasedModel
 
         # create the model accordingly
         self._qmodel_actor = modelBuilder( 'actor_model', modelConfig, True )
@@ -74,9 +78,12 @@ class IDqnAgent( object ) :
 
         # initialize backend-specific functionality
         _initInfo = backendInitializer()
+
+        # create both actor and target models
         self._qmodel_actor.initialize( _initInfo )
         self._qmodel_target.initialize( _initInfo )
 
+        # start the target model from the actor model
         self._qmodel_target.clone( self._qmodel_actor, tau = 1.0 )
 
         # replay buffer
@@ -104,7 +111,11 @@ class IDqnAgent( object ) :
 
     def act( self, state, inference = False ) :
         if inference or np.random.rand() > self._epsilon :
-            return np.argmax( self._qmodel_actor.eval( self._preprocess( state ) ) )
+            if self._useConvolutionalBasedModel :
+                _processedState = self._preprocess( state )
+                return np.argmax( self._qmodel_actor.eval( _processedState.reshape( (1,) + _processedState.shape ) ) )
+            else :
+                return np.argmax( self._qmodel_actor.eval( self._preprocess( state ) ) )
         else :
             return np.random.choice( self._nActions )
 

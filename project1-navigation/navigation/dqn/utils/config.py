@@ -41,6 +41,9 @@ class DqnAgentConfig( object ) :
         # random seed
         self.seed = 1
 
+        # whether or not to use a convolutional model 
+        self.useConvolutionalBasedModel = False
+
         # improvements to dqn
         self.useDoubleDqn = False
         self.usePrioritizedExpReplay = False
@@ -65,6 +68,7 @@ class DqnAgentConfig( object ) :
         _dataDict['replayBufferSize']           = self.replayBufferSize
         _dataDict['discount']                   = self.discount
         _dataDict['seed']                       = self.seed
+        _dataDict['useConvolutionalBasedModel'] = self.useConvolutionalBasedModel
         _dataDict['useDoubleDqn']               = self.useDoubleDqn
         _dataDict['usePrioritizedExpReplay']    = self.usePrioritizedExpReplay
         _dataDict['useDuelingDqn']              = self.useDuelingDqn
@@ -100,6 +104,7 @@ class DqnAgentConfig( object ) :
         _config.replayBufferSize            = _dataDict['replayBufferSize']
         _config.discount                    = _dataDict['discount']
         _config.seed                        = _dataDict['seed']
+        ## _config.useConvolutionalBasedModel  = _dataDict['useConvolutionalBasedModel'] # wait till all experiments are standard
         _config.useDoubleDqn                = _dataDict['useDoubleDqn']
         _config.usePrioritizedExpReplay     = _dataDict['usePrioritizedExpReplay']
         _config.useDuelingDqn               = _dataDict['useDuelingDqn']
@@ -125,16 +130,18 @@ class DqnModelConfig( object ) :
         # parameters copied from the agent configuration
         self._lr = 0.00025
         self._useImpSampling = False # True when using prioritized exp. replay
+        self._useConvolutionalBasedModel = False # True when using a conv-based model
 
     def serialize( self ) :
         _dataDict = {}
 
-        _dataDict['inputShape']         = self.inputShape
-        _dataDict['outputShape']        = self.outputShape
-        _dataDict['saveGradients']      = self.saveGradients
-        _dataDict['saveBellmanErrors']  = self.saveBellmanErrors
-        _dataDict['layers']             = self.layers
-        _dataDict['useImpSampling']     = self._useImpSampling
+        _dataDict['inputShape']                 = self.inputShape
+        _dataDict['outputShape']                = self.outputShape
+        _dataDict['saveGradients']              = self.saveGradients
+        _dataDict['saveBellmanErrors']          = self.saveBellmanErrors
+        _dataDict['layers']                     = self.layers
+        _dataDict['useImpSampling']             = self._useImpSampling
+        _dataDict['useConvolutionalBasedModel'] = self._useConvolutionalBasedModel
 
         return _dataDict
 
@@ -156,5 +163,6 @@ class DqnModelConfig( object ) :
         _config.saveBellmanErrors  = _dataDict['saveBellmanErrors']
         _config.layers             = _dataDict['layers']
         ## _config._useImpSampling     = _dataDict['useImpSampling'] # wait till all experiments are standard
+        ## _config._useConvolutionalBasedModel = _dataDict['useConvolutionalBasedModel'] # wait till all experiments are standard
 
         return _config

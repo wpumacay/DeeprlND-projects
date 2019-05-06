@@ -16,8 +16,10 @@ from rl.envs import gridworld_utils
 import matplotlib.pyplot as plt
 # ------------------------------------------------------------------------------
 
-# import banana agent (raycast )
+# import banana agents (raycast, and visual)
 from navigation import agent_raycast
+from navigation import agent_visual
+
 # @DEBUG: gridworl agent for testing
 from navigation import agent_gridworld
 
@@ -38,6 +40,7 @@ TEST = True
 TIME_START = 0
 RESULTS_FOLDER = 'results'
 SEED = 0
+VISUAL = False
 
 USE_DOUBLE_DQN = False
 USE_PRIORITIZED_EXPERIENCE_REPLAY = False
@@ -61,7 +64,7 @@ def plotQTable( envGridworld, agentGridworld ) :
 def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
     MAX_EPISODES = agent.learningMaxSteps
     MAX_STEPS_EPISODE = 1000
-    LOG_WINDOW_SIZE = 100
+    LOG_WINDOW_SIZE = 50
 
     _progressbar = tqdm( range( 1, MAX_EPISODES + 1 ), desc = 'Training>', leave = True )
     _maxAvgScore = -np.inf
@@ -201,27 +204,52 @@ def experiment( sessionId,
         # paths to the environment executables
         _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
         _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
+        _bananaVisualExecPath = os.path.join( os.getcwd(), 'executables/VisualBanana_Linux/Banana.x86_64' )
 
         # instantiate the environment
-        _env = mlagents.createDiscreteActionsEnv( _bananaExecPath, seed = SEED )
-
-        # set the seed for the agent
-        agent_raycast.AGENT_CONFIG.seed = SEED
-
-        # set improvement flags
-        agent_raycast.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
-        agent_raycast.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
-        agent_raycast.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
+        if VISUAL :
+            _env = mlagents.createDiscreteActionsEnv( _bananaVisualExecPath, seed = SEED )
+        else :
+            _env = mlagents.createDiscreteActionsEnv( _bananaExecPath, seed = SEED )
 
         # instantiate the agent
-        _agent = agent_raycast.CreateAgent( agent_raycast.AGENT_CONFIG,
-                                            agent_raycast.MODEL_CONFIG,
-                                            _modelBuilder,
-                                            _backendInitializer )
+        if VISUAL :
+            # set the seed for the agent
+            agent_visual.AGENT_CONFIG.seed = SEED
+            # set whether or not to use visual-based model
+            agent_visual.AGENT_CONFIG.useConvolutionalBasedModel = VISUAL
 
-        # save agent and model configurations
-        config.DqnAgentConfig.save( agent_raycast.AGENT_CONFIG, agentConfigFilename )
-        config.DqnModelConfig.save( agent_raycast.MODEL_CONFIG, modelConfigFilename )
+            # set improvement flags
+            agent_visual.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+            agent_visual.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+            agent_visual.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
+
+            _agent = agent_visual.CreateAgent( agent_visual.AGENT_CONFIG,
+                                               agent_visual.MODEL_CONFIG,
+                                               _modelBuilder,
+                                               _backendInitializer )
+
+            # save agent and model configurations
+            config.DqnAgentConfig.save( agent_visual.AGENT_CONFIG, agentConfigFilename )
+            config.DqnModelConfig.save( agent_visual.MODEL_CONFIG, modelConfigFilename )
+
+        else :
+            # set the seed for the agent
+            agent_raycast.AGENT_CONFIG.seed = SEED
+
+            # set improvement flags
+            agent_raycast.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+            agent_raycast.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+            agent_raycast.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
+
+            _agent = agent_raycast.CreateAgent( agent_raycast.AGENT_CONFIG,
+                                                agent_raycast.MODEL_CONFIG,
+                                                _modelBuilder,
+                                                _backendInitializer )
+
+            # save agent and model configurations
+            config.DqnAgentConfig.save( agent_raycast.AGENT_CONFIG, agentConfigFilename )
+            config.DqnModelConfig.save( agent_raycast.MODEL_CONFIG, modelConfigFilename )
 
     else :
         # @DEBUG: gridworld test environment------------------------------------
@@ -280,6 +308,10 @@ if __name__ == '__main__' :
                           help = 'whether or not to test the implementation in a gridworld env.',
                           type = str,
                           default = 'false' )
+    _parser.add_argument( '--visual',
+                          help = 'whether or not use the visual-banana environment',
+                          type = str,
+                          default = 'false' )
     _parser.add_argument( '--ddqn',
                           help = 'whether or not to use double dqn (true|false)',
                           type = str,
@@ -320,6 +352,8 @@ if __name__ == '__main__' :
     _agentConfigFilename = os.path.join( _sessionfolder, _args.sessionId + '_agentconfig.json' )
     _modelConfigFilename = os.path.join( _sessionfolder, _args.sessionId + '_modelconfig.json' )
 
+    VISUAL = ( _args.visual.lower() == 'true' )
+
     USE_DOUBLE_DQN                      = ( _args.ddqn.lower() == 'true' )
     USE_PRIORITIZED_EXPERIENCE_REPLAY   = ( _args.prioritizedExpReplay.lower() == 'true' )
     USE_DUELING_DQN                     = ( _args.duelingDqn.lower() == 'true' )
@@ -338,6 +372,7 @@ if __name__ == '__main__' :
     print( 'AgentConfigFilename     : ', _agentConfigFilename )
     print( 'ModelConfigFilename     : ', _modelConfigFilename )
     print( 'Gridworld               : ', _args.gridworld )
+    print( 'VisualBanana            : ', _args.visual )
     print( 'DoubleDqn               : ', _args.ddqn )
     print( 'PrioritizedExpReplay    : ', _args.prioritizedExpReplay )
     print( 'DuelingDqn              : ', _args.duelingDqn )

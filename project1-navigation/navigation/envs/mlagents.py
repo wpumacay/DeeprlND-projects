@@ -38,6 +38,16 @@ class SingleAgentDiscreteActionsEnv( IUnityEnvWrapper ) :
         self._uBrainName = self._unityEnv.brain_names[0]
         # brain releated for this agent
         self._uBrain = self._unityEnv.brains[ self._uBrainName ]
+        # flag active only if visual-observations are available
+        self._uHasVisualObservations = hasattr( self._uBrain, 'number_visual_observations' ) and \
+                                       hasattr( self._uBrain, 'camera_resolutions' )
+
+        if hasattr( self._uBrain, 'number_visual_observations' ) :
+            self._uHasVisualObservations = self._uBrain.number_visual_observations != 0
+
+        # number of visual observations
+        self._uNumVisualObservations = 0 if not self._uHasVisualObservations else \
+                                       self._uBrain.number_visual_observations
 
         # sanity check: action space must be discrete
         assert self._uBrain.vector_action_space_type == 'discrete', \
@@ -47,8 +57,22 @@ class SingleAgentDiscreteActionsEnv( IUnityEnvWrapper ) :
         assert self._uBrain.vector_observation_space_type == 'continuous', \
                'ERROR> environment %s must have a continuous observation space' % ( self._execName )
 
+        # @TODO: For now, the wrapper only accepts either pure vector observations, ...
+        #        or pure virtual observations. If the later are present, we use them ...
+        #        as the only observations, and use their shape of the observation space.
+
         # grab observation and action space sizes
-        self._uObservationsShape = (self._uBrain.vector_observation_space_size,)
+        if self._uHasVisualObservations :
+            # grab camera resolutions
+            _cameraResolution   = self._uBrain.camera_resolutions[0]
+            _cameraWidth        = _cameraResolution['width']
+            _cameraHeight       = _cameraResolution['height']
+            _cameraNumChannels  = 1 if _cameraResolution['blackAndWhite'] else 3
+
+            self._uObservationsShape = (_cameraNumChannels, _cameraHeight, _cameraWidth )
+        else :
+            self._uObservationsShape = (self._uBrain.vector_observation_space_size,)
+
         self._uNumActions = self._uBrain.vector_action_space_size
 
     def reset( self, training = False ) :
@@ -56,7 +80,13 @@ class SingleAgentDiscreteActionsEnv( IUnityEnvWrapper ) :
         _info = self._unityEnv.reset( train_mode = training )[ self._uBrainName ]
 
         # grab the observations from the info object
-        _observations = _info.vector_observations[0]
+        if self._uHasVisualObservations :
+            # remove batch shape, and transpose it to (depth, height, width) format
+            _observations = np.transpose( np.squeeze( _info.visual_observations[0], 
+                                                      axis = 0 ), 
+                                          (2, 0, 1) )
+        else :
+            _observations = _info.vector_observations[0]
 
         return _observations
 
@@ -65,11 +95,20 @@ class SingleAgentDiscreteActionsEnv( IUnityEnvWrapper ) :
         _stepInfo = self._unityEnv.step( action )[ self._uBrainName ]
 
         # grab the required information fron the step-info object
-        _observations   = _stepInfo.vector_observations[0]
+        if self._uHasVisualObservations :
+            _observations   = np.transpose( np.squeeze( _stepInfo.visual_observations[0], 
+                                                        axis = 0 ), 
+                                            (2, 0, 1) )
+        else :
+            _observations   = _stepInfo.vector_observations[0]
+
         _reward         = _stepInfo.rewards[0]
         _done           = _stepInfo.local_done[0]
 
         return _observations, _reward, _done, {}
+
+    def close( self ) :
+        self._unityEnv.close()
 
     @property
     def obsShape( self ) :

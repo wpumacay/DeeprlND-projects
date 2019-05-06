@@ -67,6 +67,60 @@ class NetworkPytorchGeneric( nn.Module ) :
         for _thisParams, _otherParams in zip( self.parameters(), other.parameters() ) :
             _thisParams.data.copy_( ( 1.| - tau ) * _thisParams.data + ( tau ) * _otherParams.data )
 
+class NetworkPytorchCustomVisual( nn.Module ) :
+
+    def __init__( self, inputShape, outputShape, layersDefs ) :
+        super( NetworkPytorchCustomVisual, self ).__init__()
+
+        # banana-visual has an image  of shape (3,84,84) as an observation (rank-3 tensor)
+        assert len( inputShape ) == 3, 'ERROR> input should be a rank-3 tensor'
+        # and also has a discrete set of actions, with a 4-vector for its qvalues
+        assert len( outputShape ) == 1, 'ERROR> output should be rank-1 tensor'
+
+        self._inputShape = inputShape
+        self._outputShape = outputShape
+
+        ## define the layers for this network ----------------------------------
+
+        ## output size calculations based on pytorch's conv2d documentation:
+        ## https://pytorch.org/docs/stable/nn.html#conv2d
+
+        # conv1: 32 filters of 8x8 kernels with stride of 4 and no padding
+        #        output-size-> (84 + 2*0 - 1*(8-1) -1) / 4 + 1 = 20
+        self.conv1 = nn.Conv2d( inputShape[0], 32, kernel_size = 8, stride = 4 )
+        # conv2: 64 filters of 6x6 kernels with stride of 2 and no padding
+        #        output-size-> (20 + 2*0 - 1*(6-1) -1) / 2 + 1 = 8
+        self.conv2 = nn.Conv2d( 32, 64, kernel_size = 6, stride = 2 )
+        # conv3 : 64 filters of 3x3 kernels with stride of 1 and no padding
+        #        output-size-> (8 + 2*0 - 1*(3-1) -1) / 1 + 1 = 6
+        self.conv3 = nn.Conv2d( 64, 64, kernel_size = 3, stride = 1 )
+
+        # fc1: 512 = 64 * 4 * 4 units
+        self.fc1 = nn.Linear( 64 * 6 * 6, 512 )
+
+        # fc2: outputShape[0] units, one for each action
+        self.fc2 = nn.Linear( 512, outputShape[0] )
+
+        ## ---------------------------------------------------------------------
+
+    def forward( self, x ) :
+
+        ## set_trace()
+
+        x = F.relu( self.conv1( x ) )
+        x = F.relu( self.conv2( x ) )
+        x = F.relu( self.conv3( x ) )
+
+        x = x.view( x.shape[0], -1 )
+
+        x = F.relu( self.fc1( x ) )
+
+        return self.fc2( x )
+
+    def clone( self, other, tau ) :
+        for _thisParams, _otherParams in zip( self.parameters(), other.parameters() ) :
+            _thisParams.data.copy_( ( 1. - tau ) * _thisParams.data + ( tau ) * _otherParams.data )
+
 class NetworkPytorchCustom( nn.Module ) :
 
     def __init__( self, inputShape, outputShape, layersDefs ) :
@@ -120,10 +174,16 @@ class DqnModelPytorch( model.IDqnModel ) :
         super( DqnModelPytorch, self ).__init__( name, modelConfig, trainable )
 
     def build( self ) :
-        # @TEST: creating a custom fc network
-        self._nnetwork = NetworkPytorchCustom( self._inputShape,
-                                               self._outputShape,
-                                               self._layersDefs )
+        if self._useConvolutionalBasedModel :
+            # @TEST: creating a custom fc network
+            self._nnetwork = NetworkPytorchCustomVisual( self._inputShape,
+                                                         self._outputShape,
+                                                         self._layersDefs )
+        else :
+            # @TEST: creating a custom fc network
+            self._nnetwork = NetworkPytorchCustom( self._inputShape,
+                                                   self._outputShape,
+                                                   self._layersDefs )
 
     def initialize( self, args ) :
         # grab current pytorch device
@@ -144,7 +204,7 @@ class DqnModelPytorch( model.IDqnModel ) :
 
         self._nnetwork.eval()
         with torch.no_grad() :
-            _qvalues = self._nnetwork.forward( _xx ).cpu().data.numpy()
+            _qvalues = self._nnetwork( _xx ).cpu().data.numpy()
         self._nnetwork.train()
 
         return _qvalues
@@ -162,7 +222,7 @@ class DqnModelPytorch( model.IDqnModel ) :
             self._optimizer.zero_grad()
     
             # do forward pass to compute q-target predictions
-            _yyhat = self._nnetwork.forward( _xx ).gather( 1, _aa )
+            _yyhat = self._nnetwork( _xx ).gather( 1, _aa )
     
             ## set_trace()
     
