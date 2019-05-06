@@ -204,11 +204,12 @@ def experiment( sessionId,
         # paths to the environment executables
         _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
         _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
-        _bananaVisualExecPath = os.path.join( os.getcwd(), 'executables/VisualBanana_Linux/Banana.x86_64' )
+        ## _bananaVisualExecPath = os.path.join( os.getcwd(), 'executables/VisualBanana_Linux/Banana.x86_64' )
+        _bananaVisualExecPath = os.path.join( os.getcwd(), 'executables/VisualBanana/VisualBanana.x86_64' )
 
         # instantiate the environment
         if VISUAL :
-            _env = mlagents.createDiscreteActionsEnv( _bananaVisualExecPath, seed = SEED )
+            _env = mlagents.createDiscreteActionsEnv( _bananaVisualExecPath, envType = 'visual', seed = SEED, workerID = 0 )
         else :
             _env = mlagents.createDiscreteActionsEnv( _bananaExecPath, seed = SEED )
 
