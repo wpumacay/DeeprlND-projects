@@ -3,7 +3,8 @@ import os
 import sys
 import numpy as np
 
-USE_MODERN = True
+# @TODO: should add an option to select it accordingly, or infer it from python env.
+USE_MODERN = False
 
 if USE_MODERN :
     from mlagents.envs import UnityEnvironment
@@ -211,7 +212,7 @@ class VisualBananaEnv( IUnityEnvWrapper ) :
 def createDiscreteActionsEnv( executableFullPath, envType = 'simple', seed = 0, workerID = 0 ) :
     _unityEnv = UnityEnvironment( executableFullPath, seed = seed, worker_id = workerID )
 
-    if envType == 'single' :
+    if envType == 'simple' :
         return SingleAgentDiscreteActionsEnv( _unityEnv, executableFullPath )
     elif envType == 'visual' :
         return VisualBananaEnv( _unityEnv, executableFullPath )

@@ -67,6 +67,7 @@ class DqnAgentConfig( object ) :
         _dataDict['learningMaxSteps']           = self.learningMaxSteps
         _dataDict['replayBufferSize']           = self.replayBufferSize
         _dataDict['discount']                   = self.discount
+        _dataDict['tau']                        = self.tau
         _dataDict['seed']                       = self.seed
         _dataDict['useConvolutionalBasedModel'] = self.useConvolutionalBasedModel
         _dataDict['useDoubleDqn']               = self.useDoubleDqn
@@ -103,6 +104,7 @@ class DqnAgentConfig( object ) :
         _config.learningMaxSteps            = _dataDict['learningMaxSteps']
         _config.replayBufferSize            = _dataDict['replayBufferSize']
         _config.discount                    = _dataDict['discount']
+        _config.tau                         = _dataDict['tau']
         _config.seed                        = _dataDict['seed']
         ## _config.useConvolutionalBasedModel  = _dataDict['useConvolutionalBasedModel'] # wait till all experiments are standard
         _config.useDoubleDqn                = _dataDict['useDoubleDqn']

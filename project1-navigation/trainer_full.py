@@ -7,29 +7,61 @@ from tqdm import tqdm
 from collections import deque
 from collections import defaultdict
 
-# imports from navigation package
-from navigation import agent_raycast    # agent for the raycast-based environment
-from navigation import model_pytorch    # pytorch-based model
-from navigation import model_tensorflow # tensorflow-based model
-from navigation.envs import mlagents    # simple environment wrapper
-from navigation.dqn.utils import config # config. functionality (load-save)
+# import simple gridworld for testing purposes
+from navigation.envs import mlagents
 
+# @DEBUG: test environment - gridworld (sanity check) --------------------------
+from navigation.envs import gridworld
+from navigation.envs import gridworld_utils
+import matplotlib.pyplot as plt
+# ------------------------------------------------------------------------------
+
+# import banana agents (raycast, and visual)
+from navigation import agent_raycast
+from navigation import agent_visual
+
+# @DEBUG: gridworl agent for testing
+from navigation import agent_gridworld
+
+# import config utils
+from navigation.dqn.utils import config
+
+# import model builder functionality (pytorch as backend)
+from navigation import model_pytorch
+from navigation import model_tensorflow
+
+from IPython.core.debugger import set_trace
 
 # logging functionality
 import logger
 
-from IPython.core.debugger import set_trace
-
+GRIDWORLD       = False     # global variable, set by the argparser
 TEST            = True      # global variable, set by the argparser
 TIME_START      = 0         # global variable, set in __main__
 RESULTS_FOLDER  = 'results' # global variable, where to place the results of training
 SEED            = 0         # global variable, set by argparser
+VISUAL          = False     # @TODO: Do not use this option yet. Not fully supported
 CONFIG_AGENT    = ''        # global variable, set by argparser
 CONFIG_MODEL    = ''        # global variable, set by argparser
 
 USE_DOUBLE_DQN                      = False # global variable, set by argparser
 USE_PRIORITIZED_EXPERIENCE_REPLAY   = False # global variable, set by argparser
 USE_DUELING_DQN                     = False # global variable, set by argparser
+
+# @DEBUG: test method for gridworld --------------------------------------------
+def plotQTable( envGridworld, agentGridworld ) :
+    plt.ion()
+    # evaluate the agents model for each action state
+    _qvals_sa = defaultdict( lambda : np.zeros( envGridworld.nA ) )
+    for s in range( envGridworld.nS ) :
+        if envGridworld._isTerminal( s ) :
+            _qvals_sa[s] = np.zeros( envGridworld.nA )
+        else :
+            _qvals_sa[s] = agentGridworld._qmodel_actor.eval( agentGridworld._preprocess( s ) )
+
+    gridworld_utils.plotQTableInGrid( _qvals_sa, envGridworld.rows, envGridworld.cols )
+
+# ------------------------------------------------------------------------------
 
 def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
     MAX_EPISODES = agent.learningMaxSteps
@@ -38,9 +70,9 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
 
     _progressbar = tqdm( range( 1, MAX_EPISODES + 1 ), desc = 'Training>', leave = True )
     _maxAvgScore = -np.inf
+    _scoresWindow = deque( maxlen = LOG_WINDOW_SIZE )
     _scores = []
     _scoresAvgs = []
-    _scoresWindow = deque( maxlen = LOG_WINDOW_SIZE )
     _stepsWindow = deque( maxlen = LOG_WINDOW_SIZE )
 
     _timeStart = TIME_START
@@ -83,41 +115,48 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
             if _avgScore > _maxAvgScore :
                 _maxAvgScore = _avgScore
 
-            # log resultss
-            if agent._usePrioritizedExpReplay :
-                _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f, Beta=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon, agent._rbuffer.beta ) )
-            else :
-                _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon ) )
-            _progressbar.refresh()
+            # log results
+            if iepisode % LOG_WINDOW_SIZE == 0 :
+                if agent._usePrioritizedExpReplay :
+                    _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f, Beta=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon, agent._rbuffer.beta ) )
+                else :
+                    _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon ) )
+                _progressbar.refresh()
 
-    # save trained model
-    agent.save( savefile )
+    if GRIDWORLD :
+        # @DEBUG: gridworl visualization of q-table---------------------------------
+        plotQTable( env, agent )
+        _ = input( 'Press ENTER to continue ...' )
+        # --------------------------------------------------------------------------
+    else :
+        # save trained model
+        agent.save( savefile )
 
-    _timeStop = int( time.time() )
-    _trainingTime = _timeStop - _timeStart
+        _timeStop = int( time.time() )
+        _trainingTime = _timeStop - _timeStart
 
-    # save training results for later visualization and analysis
-    logger.saveTrainingResults( resultsFilename,
+        # save training results for later visualization and analysis
+        logger.saveTrainingResults( resultsFilename,
+                                    sessionId,
+                                    _timeStart,
+                                    _scores,
+                                    _scoresAvgs,
+                                    agent.actorModel.losses,
+                                    agent.actorModel.bellmanErrors,
+                                    agent.actorModel.gradients )
+
+        # save replay batch for later visualization and analysis
+        _minibatch = agent.replayBuffer.sample( 100 )
+        _ss, _aa, _rr, _ssnext = _minibatch[0], _minibatch[1], _minibatch[2], _minibatch[3]
+        _q_s_batch = [ agent.actorModel.eval( agent._preprocess( state ) ) \
+                       for state in _ss ]
+        _replayBatch = { 'states' : _ss, 'actions' : _aa, 'rewards' : _rr, 'nextStates' : _ssnext }
+
+        logger.saveReplayBatch( replayFilename,
                                 sessionId,
-                                _timeStart,
-                                _scores,
-                                _scoresAvgs,
-                                agent.actorModel.losses,
-                                agent.actorModel.bellmanErrors,
-                                agent.actorModel.gradients )
-
-    # save replay batch for later visualization and analysis
-    _minibatch = agent.replayBuffer.sample( 100 )
-    _ss, _aa, _rr, _ssnext = _minibatch[0], _minibatch[1], _minibatch[2], _minibatch[3]
-    _q_s_batch = [ agent.actorModel.eval( agent._preprocess( state ) ) \
-                   for state in _ss ]
-    _replayBatch = { 'states' : _ss, 'actions' : _aa, 'rewards' : _rr, 'nextStates' : _ssnext }
-
-    logger.saveReplayBatch( replayFilename,
-                            sessionId,
-                            TIME_START,
-                            _replayBatch,
-                            _q_s_batch )
+                                TIME_START,
+                                _replayBatch,
+                                _q_s_batch )
 
 def test( env, agent ) :
     _progressbar = tqdm( range( 1, 10 + 1 ), desc = 'Testing>', leave = True )
@@ -161,37 +200,89 @@ def experiment( sessionId,
 
     # grab initialization-method for the model according to the library requested
     _backendInitializer = model_pytorch.BackendInitializer if library == 'pytorch' \
-                            else model_tensorflow.BackendInitializer
+                            else model_pytorch.BackendInitializer
 
-    # paths to the environment executables
-    _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
-    _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
+    if not GRIDWORLD :
+        # paths to the environment executables
+        _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
+        _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
+        _bananaVisualExecPath = os.path.join( os.getcwd(), 'executables/VisualBanana_Linux/Banana.x86_64' )
+        ## _bananaVisualExecPath = os.path.join( os.getcwd(), 'executables/VisualBanana/VisualBanana.x86_64' )
 
-    if CONFIG_AGENT != '' :
-        agent_raycast.AGENT_CONFIG = config.DqnAgentConfig.load( CONFIG_AGENT )
+        # instantiate the environment
+        if VISUAL :
+            _env = mlagents.createDiscreteActionsEnv( _bananaVisualExecPath, envType = 'visual', seed = SEED )
+        else :
+            _env = mlagents.createDiscreteActionsEnv( _bananaExecPath, seed = SEED )
 
-    if CONFIG_MODEL != '' :
-        agent_raycast.MODEL_CONFIG = config.DqnModelConfig.load( CONFIG_MODEL )
+        # instantiate the agent accordingly (visual or non-visual based environment)
 
-    # instantiate the environment
-    _env = mlagents.createDiscreteActionsEnv( _bananaExecPath, seed = SEED )
+        if VISUAL :
 
-    # set the seed for the agent
-    agent_raycast.AGENT_CONFIG.seed = SEED
+            # set the seed for the agent
+            agent_visual.AGENT_CONFIG.seed = SEED
+            # set whether or not to use visual-based model
+            agent_visual.AGENT_CONFIG.useConvolutionalBasedModel = True
 
-    # set improvement flags
-    agent_raycast.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
-    agent_raycast.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
-    agent_raycast.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
+            # set improvement flags
+            agent_visual.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+            agent_visual.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+            agent_visual.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
 
-    _agent = agent_raycast.CreateAgent( agent_raycast.AGENT_CONFIG,
-                                        agent_raycast.MODEL_CONFIG,
-                                        _modelBuilder,
-                                        _backendInitializer )
+            _agent = agent_visual.CreateAgent( agent_visual.AGENT_CONFIG,
+                                               agent_visual.MODEL_CONFIG,
+                                               _modelBuilder,
+                                               _backendInitializer )
 
-    # save agent and model configurations
-    config.DqnAgentConfig.save( agent_raycast.AGENT_CONFIG, agentConfigFilename )
-    config.DqnModelConfig.save( agent_raycast.MODEL_CONFIG, modelConfigFilename )
+            # save agent and model configurations
+            config.DqnAgentConfig.save( agent_visual.AGENT_CONFIG, agentConfigFilename )
+            config.DqnModelConfig.save( agent_visual.MODEL_CONFIG, modelConfigFilename )
+
+        else :
+            # set the seed for the agent
+            agent_raycast.AGENT_CONFIG.seed = SEED
+
+            # set improvement flags
+            agent_raycast.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+            agent_raycast.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+            agent_raycast.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
+
+            _agent = agent_raycast.CreateAgent( agent_raycast.AGENT_CONFIG,
+                                                agent_raycast.MODEL_CONFIG,
+                                                _modelBuilder,
+                                                _backendInitializer )
+
+            # save agent and model configurations
+            config.DqnAgentConfig.save( agent_raycast.AGENT_CONFIG, agentConfigFilename )
+            config.DqnModelConfig.save( agent_raycast.MODEL_CONFIG, modelConfigFilename )
+
+    else :
+        # @DEBUG: gridworld test environment------------------------------------
+        _env = gridworld.GridWorldEnv( gridworld.BOOK_LAYOUT, # DEFAULT_LAYOUT
+                                       noise = 0.0,
+                                       rewardAtGoal = -1.0, # 10.0
+                                       rewardAtHole = -1.0, # -10.0
+                                       rewardPerStep = -1.0,
+                                       renderInteractive = TEST,
+                                       randomSeed = 0 )
+
+        agent_gridworld.AGENT_CONFIG.stateDim = _env.nS
+        agent_gridworld.AGENT_CONFIG.nActions = _env.nA
+    
+        agent_gridworld.MODEL_CONFIG.inputShape   = ( _env.nS, )
+        agent_gridworld.MODEL_CONFIG.outputShape  = ( _env.nA, )
+
+        # set improvement flags
+        agent_gridworld.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+        agent_gridworld.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+        agent_gridworld.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
+
+        _agent = agent_gridworld.CreateAgent( agent_gridworld.AGENT_CONFIG,
+                                              agent_gridworld.MODEL_CONFIG,
+                                              _modelBuilder,
+                                              _backendInitializer )
+
+        # ----------------------------------------------------------------------
 
     if not TEST :
         train( _env, _agent, sessionId, savefile, resultsFilename, replayFilename )
@@ -218,6 +309,10 @@ if __name__ == '__main__' :
                           help = 'random seed for the environment and generators',
                           type = int,
                           default = 0 )
+    _parser.add_argument( '--gridworld',
+                          help = 'whether or not to test the implementation in a gridworld env.',
+                          type = str,
+                          default = 'false' )
     _parser.add_argument( '--visual',
                           help = 'whether or not use the visual-banana environment',
                           type = str,
@@ -244,6 +339,9 @@ if __name__ == '__main__' :
                           default = '' )
 
     _args = _parser.parse_args()
+
+    # whether or not use the toy gridworld test environment
+    GRIDWORLD = ( _args.gridworld.lower() == 'true' )
 
     # whether or not we are in test mode
     TEST = ( _args.mode == 'test' )
@@ -300,6 +398,7 @@ if __name__ == '__main__' :
     print( 'ReplayFilename          : ', _replayFilename )
     print( 'AgentConfigFilename     : ', _agentConfigFilename )
     print( 'ModelConfigFilename     : ', _modelConfigFilename )
+    print( 'Gridworld               : ', _args.gridworld )
     print( 'VisualBanana            : ', _args.visual )
     print( 'DoubleDqn               : ', _args.ddqn )
     print( 'PrioritizedExpReplay    : ', _args.prioritizedExpReplay )

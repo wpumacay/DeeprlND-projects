@@ -1,0 +1,8 @@
+tqdm
+numpy
+matplotlib
+h5py
+gym
+ipython
+ipykernel
+unityagents==0.4.0
