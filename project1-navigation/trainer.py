@@ -34,7 +34,7 @@ USE_DUELING_DQN                     = False # global variable, set by argparser
 def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
     MAX_EPISODES = agent.learningMaxSteps
     MAX_STEPS_EPISODE = 1000
-    LOG_WINDOW_SIZE = 50
+    LOG_WINDOW_SIZE = 100
 
     _progressbar = tqdm( range( 1, MAX_EPISODES + 1 ), desc = 'Training>', leave = True )
     _maxAvgScore = -np.inf
