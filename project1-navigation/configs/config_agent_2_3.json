@@ -2,7 +2,7 @@
     "stateDim"                  : 37,
     "nActions"                  : 4,
     "epsilonStart"              : 1.0,
-    "epsilonEnd"                : 0.1,
+    "epsilonEnd"                : 0.01,
     "epsilonSteps"              : 100000,
     "epsilonDecay"              : 0.995,
     "epsilonSchedule"           : "geometric",

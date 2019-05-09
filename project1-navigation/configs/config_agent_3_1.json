@@ -12,7 +12,7 @@
     "learningUpdateFreq"        : 4,
     "learningUpdateTargetFreq"  : 4,
     "learningMaxSteps"          : 2000,
-    "replayBufferSize"          : 16384,
+    "replayBufferSize"          : 131072,
     "discount"                  : 0.999,
     "tau"                       : 0.001,
     "seed"                      : 0,
