@@ -14,9 +14,10 @@ class IDqnAgent( object ) :
         """Constructs a generic Dqn agent, given configuration information
 
         Args:
-            agentConfig (DqnAgentConfig) : config object with agent parameters
-            modelConfig (DqnModelConfig) : config object with model parameters
-            modelBuilder (IDqnModel) : factory function to instantiate the model
+            agentConfig (DqnAgentConfig)  : config object with agent parameters
+            modelConfig (DqnModelConfig)  : config object with model parameters
+            modelBuilder (function)       : factory function to instantiate the model
+            backendInitializer (function) : function to be called to intialize specifics of each DL library
 
         """
 
@@ -88,7 +89,7 @@ class IDqnAgent( object ) :
 
         # replay buffer
         if self._usePrioritizedExpReplay :
-            self._rbuffer = prioritybuffer.PriorityBuffer( self._replayBufferSize,
+            self._rbuffer = prioritybuffer.DqnPriorityBuffer( self._replayBufferSize,
                                                            self._seed )
         else :
             self._rbuffer = replaybuffer.DqnReplayBuffer( self._replayBufferSize,
@@ -101,15 +102,40 @@ class IDqnAgent( object ) :
         self._printConfig();
 
     def save( self, filename ) :
+        """Saves learned models into disk
+
+        Args: 
+            filename (str) : filepath where we want to save the our model
+
+        """
+
         if self._qmodel_actor :
             self._qmodel_actor.save( filename )
 
     def load( self, filename ) :
+        """Loads a trained model from disk
+
+        Args:
+            filename (str) : filepath where we want to load our model from
+
+        """
+
         if self._qmodel_actor :
             self._qmodel_actor.load( filename )
             self._qmodel_target.clone( self._qmodel_actor, tau = 1.0 )
 
     def act( self, state, inference = False ) :
+        """Returns an action to take from the given state
+
+        Args:
+            state (object)    : state|observation coming from the simulator
+            inference (bool)  : whether or not we are in inference mode
+
+        Returns:
+            int : action to take (assuming discrete actions space)
+
+        """
+
         if inference or np.random.rand() > self._epsilon :
             if self._useConvolutionalBasedModel :
                 _processedState = self._preprocess( state )
@@ -120,6 +146,11 @@ class IDqnAgent( object ) :
             return np.random.choice( self._nActions )
 
     def step( self, transition ) :
+        """Does one step of the learning algorithm, from Mnih et. al.
+           https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
+
+        """
+        
         # grab information from this transition
         _s, _a, _snext, _r, _done = transition
         # preprocess the raw state

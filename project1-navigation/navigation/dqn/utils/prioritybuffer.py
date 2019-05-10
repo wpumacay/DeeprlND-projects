@@ -4,10 +4,11 @@ import numpy as np
 
 from collections import namedtuple
 from navigation.dqn.utils import segmentree
+from navigation.dqn.utils import buffer
 
 from IPython.core.debugger import set_trace
 
-class PriorityBuffer( object ) :
+class DqnPriorityBuffer( buffer.IBuffer ) :
 
     def __init__( self, 
                   bufferSize, 
@@ -17,9 +18,7 @@ class PriorityBuffer( object ) :
                   beta = 0.4,
                   dbeta = 0.00001 ) :
 
-        super( PriorityBuffer, self ).__init__()
-
-        self._bufferSize = bufferSize
+        super( DqnPriorityBuffer, self ).__init__( bufferSize, randomSeed )
 
         # hyperparameters of Prioritized experience replay
         self._eps   = eps    # extra ammount added to the abs(tderror) to avoid zero probs.

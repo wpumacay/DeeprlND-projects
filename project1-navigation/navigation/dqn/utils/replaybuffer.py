@@ -5,14 +5,15 @@ import numpy as np
 from collections import namedtuple
 from collections import deque
 
+from navigation.dqn.utils import buffer
+
 from IPython.core.debugger import set_trace
 
-class DqnReplayBuffer( object ) :
+class DqnReplayBuffer( buffer.IBuffer ) :
 
     def __init__( self, bufferSize, randomSeed ) :
-        super( DqnReplayBuffer, self ).__init__()
+        super( DqnReplayBuffer, self ).__init__( bufferSize, randomSeed )
 
-        self._bufferSize = bufferSize
         self._experience = namedtuple( 'Step', 
                                        field_names = [ 'state', 
                                                        'action',
