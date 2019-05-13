@@ -402,14 +402,25 @@ class GridWorldEnv( Env ) :
 
         return [row, col]
 
-    def _isTerminal( self, state ) :
+    def _isCellType( self, state, cType ) :
         [ _row, _col ] = self._state2pos( state )
-        # check if in hole or goal
-        if ( ( self.m_grid[_row, _col] == CELL_GOAL ) or
-             ( self.m_grid[_row, _col] == CELL_HOLE ) ) :
+        # check if in blocked cell
+        if self.m_grid[_row, _col] == cType :
             return True
 
         return False
+
+    def _isTerminal( self, state ) :
+        return ( self._isGoal( state ) or self._isHole( state ) )
+
+    def _isBlocked( self, state ) :
+        return self._isCellType( state, CELL_BLOCKED )
+
+    def _isHole( self, state ) :
+        return self._isCellType( state, CELL_HOLE )
+
+    def _isGoal( self, state ) :
+        return self._isCellType( state, CELL_GOAL )
 
     def _pickSidewaysAction( self, action, sideChoice ) :
         if action == ACTION_UP or action == ACTION_DOWN :
@@ -500,5 +511,17 @@ class GridWorldEnv( Env ) :
             self.m_userKey = -1
             if event.key == 'escape' :
                 self.m_userRequestFinish = True
+
+    def getRewardAt( self, state ) :
+        if self._isHole( state ) :
+            return self.m_rewardAtHole
+        elif self._isGoal( state ) :
+            if state in self.m_gridRewardsLayout :
+                return self.m_gridRewardsLayout[state]
+            else :
+                return self.m_rewardAtGoal
+
+        return 0.0
+    
 
     ## #########################################################################################################

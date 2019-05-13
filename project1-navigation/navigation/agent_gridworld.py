@@ -33,6 +33,8 @@ AGENT_CONFIG.learningUpdateTargetFreq   = 4
 AGENT_CONFIG.learningMaxSteps           = 2000
 AGENT_CONFIG.replayBufferSize           = 10000
 AGENT_CONFIG.discount                   = 0.999
+## AGENT_CONFIG.discount                   = 0.9
+## AGENT_CONFIG.discount                   = 0.9
 AGENT_CONFIG.tau                        = 0.01
 AGENT_CONFIG.seed                       = 0
 

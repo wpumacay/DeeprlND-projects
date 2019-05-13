@@ -54,8 +54,10 @@ def plotQTable( envGridworld, agentGridworld ) :
     # evaluate the agents model for each action state
     _qvals_sa = defaultdict( lambda : np.zeros( envGridworld.nA ) )
     for s in range( envGridworld.nS ) :
-        if envGridworld._isTerminal( s ) :
+        if envGridworld._isBlocked( s ) :
             _qvals_sa[s] = np.zeros( envGridworld.nA )
+        elif envGridworld._isTerminal( s ) :
+            _qvals_sa[s] = np.ones( envGridworld.nA ) * envGridworld.getRewardAt( s )
         else :
             _qvals_sa[s] = agentGridworld._qmodel_actor.eval( agentGridworld._preprocess( s ) )
 
@@ -79,7 +81,10 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
 
     for iepisode in _progressbar :
 
-        _state = env.reset( training = True )
+        if GRIDWORLD:
+            _state = env.reset()
+        else :
+            _state = env.reset( training = True )
         _score = 0
         _nsteps = 0
 
@@ -123,15 +128,15 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
                     _progressbar.set_description( 'Training> Max-Avg=%.2f, Curr-Avg=%.2f, Curr=%.2f, Eps=%.2f' % (_maxAvgScore, _avgScore, _score, agent.epsilon ) )
                 _progressbar.refresh()
 
+    # save trained model
+    agent.save( savefile )
+
     if GRIDWORLD :
         # @DEBUG: gridworl visualization of q-table---------------------------------
         plotQTable( env, agent )
         _ = input( 'Press ENTER to continue ...' )
         # --------------------------------------------------------------------------
     else :
-        # save trained model
-        agent.save( savefile )
-
         _timeStop = int( time.time() )
         _trainingTime = _timeStop - _timeStart
 
@@ -162,7 +167,10 @@ def test( env, agent ) :
     _progressbar = tqdm( range( 1, 10 + 1 ), desc = 'Testing>', leave = True )
     for _ in _progressbar :
 
-        _state = env.reset( training = False )
+        if GRIDWORLD :
+            _state = env.reset()
+        else :
+            _state = env.reset( training = False )
         _score = 0.0
         _goodBananas = 0
         _badBananas = 0
@@ -171,14 +179,20 @@ def test( env, agent ) :
             _action = agent.act( _state, inference = True )
             _state, _reward, _done, _ = env.step( _action )
 
-            if _reward > 0 :
-                _goodBananas += 1
-                _progressbar.write( 'Got banana! :D. So far: %d' % _goodBananas )
-            elif _reward < 0 :
-                _badBananas += 1
-                _progressbar.write( 'Got bad banana :/. So far: %d' % _badBananas )
+            if GRIDWORLD :
+                env.render()
+            else :
+                if _reward > 0 :
+                    _goodBananas += 1
+                    _progressbar.write( 'Got banana! :D. So far: %d' % _goodBananas )
+                elif _reward < 0 :
+                    _badBananas += 1
+                    _progressbar.write( 'Got bad banana :/. So far: %d' % _badBananas )
 
             _score += _reward
+
+            if GRIDWORLD :
+                _ = input( 'Press ENTER to continue ...' )
 
             if _done :
                 break
@@ -258,11 +272,21 @@ def experiment( sessionId,
 
     else :
         # @DEBUG: gridworld test environment------------------------------------
-        _env = gridworld.GridWorldEnv( gridworld.BOOK_LAYOUT, # DEFAULT_LAYOUT
+        _env = gridworld.GridWorldEnv( gridworld.BOOK_LAYOUT,
+                                       ## gridworld.DRLBOOTCAMP_LAYOUT,
+                                       ## gridworld.DEFAULT_LAYOUT,
                                        noise = 0.0,
-                                       rewardAtGoal = -1.0, # 10.0
-                                       rewardAtHole = -1.0, # -10.0
+                                       ## noise = 0.2,
+                                       ## noise = 0.0,
+                                       rewardAtGoal = -1.0,
+                                       rewardAtHole = -1.0,
+                                       ## rewardAtGoal = 1.0,
+                                       ## rewardAtHole = -1.0,
+                                       ## rewardAtGoal = 10.0,
+                                       ## rewardAtHole = -10.0,
                                        rewardPerStep = -1.0,
+                                       ## rewardPerStep = 0.0,
+                                       ## rewardPerStep = 0.0,
                                        renderInteractive = TEST,
                                        randomSeed = 0 )
 
