@@ -1,0 +1,22 @@
+{
+    "stateDim"                  : 37,
+    "nActions"                  : 4,
+    "epsilonStart"              : 1.0,
+    "epsilonEnd"                : 0.01,
+    "epsilonSteps"              : -1,
+    "epsilonDecay"              : 0.9975,
+    "epsilonSchedule"           : "geometric",
+    "lr"                        : 0.0005,
+    "minibatchSize"             : 64,
+    "learningStartsAt"          : 0,
+    "learningUpdateFreq"        : 4,
+    "learningUpdateTargetFreq"  : 4,
+    "learningMaxSteps"          : 2000,
+    "replayBufferSize"          : 100000,
+    "discount"                  : 0.999,
+    "tau"                       : 0.001,
+    "seed"                      : 0,
+    "useDoubleDqn"              : false,
+    "usePrioritizedExpReplay"   : false,
+    "useDuelingDqn"             : false
+}

@@ -2,6 +2,8 @@ tqdm
 numpy
 matplotlib
 h5py
+pyglet
+box2d
 gym
 ipython
 ipykernel

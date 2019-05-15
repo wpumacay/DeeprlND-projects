@@ -1,11 +1,13 @@
 
 import os
-import numpy as np
-import argparse
+import gym
 import time
+import argparse
+import numpy as np
 from tqdm import tqdm
 from collections import deque
 from collections import defaultdict
+
 
 # import simple gridworld for testing purposes
 from navigation.envs import mlagents
@@ -20,8 +22,9 @@ import matplotlib.pyplot as plt
 from navigation import agent_raycast
 from navigation import agent_visual
 
-# @DEBUG: gridworl agent for testing
+# @DEBUG: gridworl and gym agents for testing
 from navigation import agent_gridworld
+from navigation import agent_gym_control
 
 # import config utils
 from navigation.dqn.utils import config
@@ -36,6 +39,8 @@ from IPython.core.debugger import set_trace
 import logger
 
 GRIDWORLD       = False     # global variable, set by the argparser
+GYM             = True      # global variable, whether or not use gym envs.
+GYM_ENV         = ''        # global variable, set by the argparser
 TEST            = True      # global variable, set by the argparser
 TIME_START      = 0         # global variable, set in __main__
 RESULTS_FOLDER  = 'results' # global variable, where to place the results of training
@@ -68,7 +73,7 @@ def plotQTable( envGridworld, agentGridworld ) :
 def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
     MAX_EPISODES = agent.learningMaxSteps
     MAX_STEPS_EPISODE = 1000
-    LOG_WINDOW_SIZE = 50
+    LOG_WINDOW_SIZE = 100
 
     _progressbar = tqdm( range( 1, MAX_EPISODES + 1 ), desc = 'Training>', leave = True )
     _maxAvgScore = -np.inf
@@ -81,7 +86,7 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
 
     for iepisode in _progressbar :
 
-        if GRIDWORLD:
+        if GRIDWORLD or GYM:
             _state = env.reset()
         else :
             _state = env.reset( training = True )
@@ -164,10 +169,12 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
                                 _q_s_batch )
 
 def test( env, agent ) :
+
     _progressbar = tqdm( range( 1, 10 + 1 ), desc = 'Testing>', leave = True )
     for _ in _progressbar :
-
-        if GRIDWORLD :
+        _ = input( 'Ready for testing. Press ENTER to continue' )
+        
+        if GRIDWORLD or GYM :
             _state = env.reset()
         else :
             _state = env.reset( training = False )
@@ -179,7 +186,7 @@ def test( env, agent ) :
             _action = agent.act( _state, inference = True )
             _state, _reward, _done, _ = env.step( _action )
 
-            if GRIDWORLD :
+            if GRIDWORLD or GYM :
                 env.render()
             else :
                 if _reward > 0 :
@@ -191,7 +198,7 @@ def test( env, agent ) :
 
             _score += _reward
 
-            if GRIDWORLD :
+            if GRIDWORLD:
                 _ = input( 'Press ENTER to continue ...' )
 
             if _done :
@@ -216,7 +223,7 @@ def experiment( sessionId,
     _backendInitializer = model_pytorch.BackendInitializer if library == 'pytorch' \
                             else model_pytorch.BackendInitializer
 
-    if not GRIDWORLD :
+    if not GRIDWORLD and not GYM :
         # paths to the environment executables
         _bananaExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux/Banana.x86_64' )
         _bananaHeadlessExecPath = os.path.join( os.getcwd(), 'executables/Banana_Linux_NoVis/Banana.x86_64' )
@@ -270,7 +277,7 @@ def experiment( sessionId,
             config.DqnAgentConfig.save( agent_raycast.AGENT_CONFIG, agentConfigFilename )
             config.DqnModelConfig.save( agent_raycast.MODEL_CONFIG, modelConfigFilename )
 
-    else :
+    elif GRIDWORLD :
         # @DEBUG: gridworld test environment------------------------------------
         _env = gridworld.GridWorldEnv( gridworld.BOOK_LAYOUT,
                                        ## gridworld.DRLBOOTCAMP_LAYOUT,
@@ -308,6 +315,28 @@ def experiment( sessionId,
 
         # ----------------------------------------------------------------------
 
+    elif GYM :
+        # @DEBUG: gym test environment------------------------------------------
+        _env = gym.make( GYM_ENV )
+
+        agent_gym_control.AGENT_CONFIG.stateDim = _env.observation_space.shape
+        agent_gym_control.AGENT_CONFIG.nActions = _env.action_space.n
+    
+        agent_gym_control.MODEL_CONFIG.inputShape   = _env.observation_space.shape
+        agent_gym_control.MODEL_CONFIG.outputShape  = ( _env.action_space.n, )
+
+        # set improvement flags
+        agent_gym_control.AGENT_CONFIG.useDoubleDqn             = USE_DOUBLE_DQN
+        agent_gym_control.AGENT_CONFIG.usePrioritizedExpReplay  = USE_PRIORITIZED_EXPERIENCE_REPLAY
+        agent_gym_control.AGENT_CONFIG.useDuelingDqn            = USE_DUELING_DQN
+
+        _agent = agent_gym_control.CreateAgent( agent_gym_control.AGENT_CONFIG,
+                                                agent_gym_control.MODEL_CONFIG,
+                                                _modelBuilder,
+                                                _backendInitializer )
+
+        # ----------------------------------------------------------------------
+
     if not TEST :
         train( _env, _agent, sessionId, savefile, resultsFilename, replayFilename )
     else :
@@ -337,6 +366,10 @@ if __name__ == '__main__' :
                           help = 'whether or not to test the implementation in a gridworld env.',
                           type = str,
                           default = 'false' )
+    _parser.add_argument( '--gym',
+                          help = 'gym environment to use',
+                          type = str,
+                          default = '' )
     _parser.add_argument( '--visual',
                           help = 'whether or not use the visual-banana environment',
                           type = str,
@@ -366,6 +399,10 @@ if __name__ == '__main__' :
 
     # whether or not use the toy gridworld test environment
     GRIDWORLD = ( _args.gridworld.lower() == 'true' )
+
+    # whether or not use a gym-environment
+    GYM     = ( _args.gym != '' )
+    GYM_ENV = _args.gym
 
     # whether or not we are in test mode
     TEST = ( _args.mode == 'test' )
@@ -423,6 +460,8 @@ if __name__ == '__main__' :
     print( 'AgentConfigFilename     : ', _agentConfigFilename )
     print( 'ModelConfigFilename     : ', _modelConfigFilename )
     print( 'Gridworld               : ', _args.gridworld )
+    print( 'Gym                     : ', GYM )
+    print( 'Gym-env                 : ', 'None' if not GYM else _args.gym )
     print( 'VisualBanana            : ', _args.visual )
     print( 'DoubleDqn               : ', _args.ddqn )
     print( 'PrioritizedExpReplay    : ', _args.prioritizedExpReplay )
