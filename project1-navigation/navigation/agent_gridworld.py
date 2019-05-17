@@ -11,6 +11,8 @@ class DqnGridworldAgent( agent.IDqnAgent ) :
     def __init__( self, agentConfig, modelConfig, modelBuilder, backendInitializer ) :
         super( DqnGridworldAgent, self ).__init__( agentConfig, modelConfig, modelBuilder, backendInitializer )
 
+        self._actionsDescs = ['UP', 'DOWN', 'LEFT', 'RIGHT']
+
     def _preprocess( self, rawState ) :
         # rawState is an index, so convert it to a one-hot representation
         _stateOneHot = np.zeros( self._stateDim )

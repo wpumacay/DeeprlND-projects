@@ -29,6 +29,8 @@ from navigation import agent_gym_control
 # import config utils
 from navigation.dqn.utils import config
 
+from navigation.dqn.utils import plot
+
 # import model builder functionality (pytorch as backend)
 from navigation import model_pytorch
 from navigation import model_tensorflow
@@ -170,21 +172,38 @@ def train( env, agent, sessionId, savefile, resultsFilename, replayFilename ) :
 
 def test( env, agent ) :
 
+    if GYM : 
+        # replace description with the appropriate one
+        _descriptions = ['NOP', 'LEFT-ENGINE', 'MAIN-ENGINE', 'RIGHT-ENGINE']
+    else :
+        _descriptions = agent.actionsDescs
+
+    _qViz = plot.QvaluesVisualizer( _descriptions )
+    _vViz = plot.TimeSeriesVisualizer()
+
+    _ = input( 'Ready for testing. Press ENTER to continue' )
+
     _progressbar = tqdm( range( 1, 10 + 1 ), desc = 'Testing>', leave = True )
     for _ in _progressbar :
-        _ = input( 'Ready for testing. Press ENTER to continue' )
-        
+
         if GRIDWORLD or GYM :
             _state = env.reset()
         else :
             _state = env.reset( training = False )
+
         _score = 0.0
         _goodBananas = 0
         _badBananas = 0
 
+        _ = input( 'Ready for testing. Press ENTER to continue' )
+
         while True :
             _action = agent.act( _state, inference = True )
             _state, _reward, _done, _ = env.step( _action )
+
+            _qvalues = agent.actorModel.eval( agent._preprocess( _state ) )
+            _qViz.update( _qvalues )
+            _vViz.update( np.max( _qvalues ) )
 
             if GRIDWORLD or GYM :
                 env.render()

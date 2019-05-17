@@ -11,6 +11,8 @@ class DqnBananaRaycastAgent( agent.IDqnAgent ) :
     def __init__( self, agentConfig, modelConfig, modelBuilder, backendInitializer ) :
         super( DqnBananaRaycastAgent, self ).__init__( agentConfig, modelConfig, modelBuilder, backendInitializer )
 
+        self._actionsDescs = ['FORWARD', 'BACKWARD', 'TURN-LEFT', 'TURN-RIGHT']
+
     def _preprocess( self, rawState ) :
         """Default preprocessing by just copying the data
 

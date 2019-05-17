@@ -99,6 +99,9 @@ class IDqnAgent( object ) :
         self._currState = None
         self._nextState = None
 
+        # agent actions descriptions
+        self._actionsDescs = ['???'] * self._nActions
+
         self._printConfig();
 
     def save( self, filename ) :
@@ -309,6 +312,10 @@ class IDqnAgent( object ) :
     @property
     def replayBuffer( self ) :
         return self._rbuffer
+
+    @property
+    def actionsDescs( self ) :
+        return self._actionsDescs
 
     def _printConfig( self ) :
         print( '#############################################################' )
