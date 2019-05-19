@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def drawStdPlot( batchResults, title, xlabel, ylabel, color = 'r', axes = None ) : 
+def drawStdPlot( batchResults, title, xlabel, ylabel, startStep = 1, color = 'r', axes = None ) : 
     """Draws an std-plot from a batch of results from various experiments
     
     Args:
@@ -23,7 +23,7 @@ def drawStdPlot( batchResults, title, xlabel, ylabel, color = 'r', axes = None )
 
     # each element has _niters elements on it (iters: episodes, steps, etc.)
     _niters = batchResults.shape[1]
-    _xx = np.arange( _niters )
+    _xx = np.arange( _niters ) + startStep
 
     # grab mean and std over all runs
     _mean = batchResults.mean( axis = 0 )
@@ -32,6 +32,10 @@ def drawStdPlot( batchResults, title, xlabel, ylabel, color = 'r', axes = None )
     # do the plotting
     axes.plot( _xx, _mean, color = color, linestyle = '-' )
     axes.fill_between( _xx, _mean - 2. * _std, _mean + 2. * _std, color = color, alpha = 0.5 )
+
+    axes.set_xlabel( xlabel )
+    axes.set_ylabel( ylabel )
+    axes.set_title( title )
 
     return axes
 

@@ -5,3 +5,4 @@ executables/
 __pycache__/
 *.egg-info/
 *.vscode/
+results/

@@ -39,8 +39,8 @@ def loadTrainingResults( filename ) :
     with open( filename, 'rb' ) as file :
         _data = pickle.load( file )
 
-    print( 'INFO> loaded training data from session [%s] with timestamp [%s]' % \
-                ( _data['sessionId'], time.ctime( int( _data['timestamp'] ) ) ) )
+    ## print( 'INFO> loaded training data from session [%s] with timestamp [%s]' % \
+    ##             ( _data['sessionId'], time.ctime( int( _data['timestamp'] ) ) ) )
 
     return _data
 
@@ -73,7 +73,7 @@ def loadReplayBatch( filename ) :
     with open( filename, 'rb' ) as file :
         _dataBatch = pickle.load( filename )
 
-    print( 'INFO> loaded replay batch from session [%s] with timestamp [%s]' % \
-                ( _dataBatch['sessionId'], time.ctime( int( _dataBatch['timestamp'] ) ) ) )
+    ## print( 'INFO> loaded replay batch from session [%s] with timestamp [%s]' % \
+    ##             ( _dataBatch['sessionId'], time.ctime( int( _dataBatch['timestamp'] ) ) ) )
 
     return _data
