@@ -874,7 +874,7 @@ class DqnModelPytorch( model.IDqnModel ) :
   have gradients being computed and used. If our model has its **_trainable** flag
   set to false we then just create the required ops for evaluation only (used for
   computing the TD-targets), whereas, if our model is trainable, we create the full 
-  computation graph which goes from inputs (minibatch $$\left \{ (s,a) \right \}$$)
+  computation graph which goes from inputs (minibatch { (s,a) })
   to the MSE loss using the estimates from the network and the TD-targets passed for training.
 
 ```python
@@ -1457,11 +1457,11 @@ that at max. 1800 steps a working solution should be able to already solve the t
 we consider these values to be small enough to not introduce instabilities during learning.
 We actually had an issue related to a wrong interpolation which made learning stable
 for test cases like lunar lander, but unstable for the banana environment. We were
-using as update rule $$\theta^{-} := \tau \theta^{-} + (1-\tau) \theta$$, but the
-correct update rule was $$\theta^{-} := (1-\tau) \theta^{-} + \tau \theta$$. As
-we were using a very small $$\tau$$, we were effectively running our experiements 
+using as update rule &theta;(-) := &tau; &theta;(-) + (1-&tau;) &theta;, but the
+correct update rule was &theta;(-) := (1-&tau;) &theta;(-) + &tau; &theta;. As
+we were using a very small &tau;, we were effectively running our experiements 
 with hard-updates at a very high frequency (1 update per 4 steps) instead of soft-updates.
-This seemed to be working fine for the Lunar Lander environment (we increased $$\tau$$
+This seemed to be working fine for the Lunar Lander environment (we increased &tau;
 to make it work), but didn't work at all in the banana environment.
 
 * The minibatch size was kept the same (64). As we are not using any big network
