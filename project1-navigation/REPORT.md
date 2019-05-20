@@ -45,20 +45,20 @@ This is an accompaying report for the project-1 submission. Below we list some k
 will cover in our submission:
 
 * [Agent description](#1-agent-description)
-    * [Deep Q-learning overview](#1.1-deep-q-learning-overview)
-    * [Q-network architecture](#1.2-q-network-architecture)
+    * [Deep Q-learning overview](#11-deep-q-learning-overview)
+    * [Q-network architecture](#12-q-network-architecture)
     
 * [Implementation](#2-implementation)
-    * [Agent implementation](#2.1-agent)
-    * [Model implementation](#2.2-model)
-    * [Replay buffer implementation](#2.3-replay-buffer)
-    * [Trainer implementation](#2.4-trainer)
-    * [Choice of hyperparameters](#2.5-hyperparameters)
+    * [Agent implementation](#21-agent)
+    * [Model implementation](#22-model)
+    * [Replay buffer implementation](#23-replay-buffer)
+    * [Trainer implementation](#24-trainer)
+    * [Choice of hyperparameters](#25-hyperparameters)
 
 * [Results](#3-results)
-    * [Running a pretrained agent](#3.0-running-a-pretrained-agent)
-    * [Submission results](#3.1-submission-results)
-    * [Experiments](#3.2-experiments)
+    * [Running a pretrained agent](#30-running-a-pretrained-agent)
+    * [Submission results](#31-submission-results)
+    * [Experiments](#32-experiments)
 
 * [Future work](#4-future-work)
 
