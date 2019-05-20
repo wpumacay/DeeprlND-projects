@@ -1495,6 +1495,16 @@ file) are shown below:
     "usePrioritizedExpReplay"   : false,
     "useDuelingDqn"             : false
 
+### 2.6 Improvements
+
+We implemented the following improvements to the base DQN implementation:
+
+* Double Q-learning (DDQN)
+* Prioritized Experience Replay (PER)
+
+For a detailed explanation of these improvements, and the related implementation, please
+refer to [part-3](url_project_1_post_part_3) of the accompying post we made (section 7).
+
 ## 3. Results
 
 In this section we show the results of our submission, which were obtained through
