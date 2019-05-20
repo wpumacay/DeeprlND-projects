@@ -287,7 +287,7 @@ pip install tensorflow==1.12.0
 
 To train the agent we provided a trainer script ([trainer.py][url_trainer_script]) which you can use in the following way:
 
-```python
+```bash
 python trainer.py train --sessionId=banana_train_1
 ```
 
@@ -297,7 +297,7 @@ will be stored in the folder **./results/banana_train_1**.
 
 To test the trained agent just run the trainer script in test mode as follows:
 
-```python
+```bash
 python trainer.py test --sessionId=banana_train_1
 ```
 
@@ -332,3 +332,10 @@ To run a pretrained lunarlander-agent just run the following:
 ```bash
 python trainer_full.py --sessionId=gym_lunarlander --gym=LunarLander-v2
 ```
+
+## References
+
+* [Original DQN implementation](https://sites.google.com/a/deepmind.com/dqn/)
+* [OpenAI baselines PER implementation](https://github.com/openai/baselines/blob/master/baselines/deepq/)
+* [@Jaromiru PER implementation](https://github.com/jaromiru/AI-blog/blob/master/SumTree.py)
+* [@MorvanZhou PER implementation](https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/5.2_Prioritized_Replay_DQN/RL_brain.py)
