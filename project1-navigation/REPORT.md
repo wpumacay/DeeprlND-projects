@@ -9,8 +9,26 @@
 [img_results_submission_single_tensorflow]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_single_tensorflow.png
 [img_results_submission_all_runs]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs.png
 [img_reulsts_submission_all_runs_pytorch_std]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_pytorch_std.png
-[img_reulsts_submission_all_runs_tensorflow_std]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_tensorflow_std.png
+[img_results_submission_all_runs_tensorflow_std]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_tensorflow_std.png
+
+[img_rl_q_learning_update_rule]: imgs/img_rl_q_learning_update_rule.png
+[img_rl_q_learning_algorithm]: imgs/img_rl_q_learning_algorithm.png
+[img_rl_q_learning_fapprox_optimization_formulation]: imgs/img_rl_q_learning_fapprox_optimization_formulation.png
+[img_rl_q_learning_fapprox_derivation]: imgs/img_rl_q_learning_fapprox_derivation.png
+[img_rl_q_learning_fapprox_update_rule_with_oracle]: imgs/img_rl_q_learning_fapprox_update_rule_with_oracle.png
+[img_rl_q_learning_fapprox_update_rule]: imgs/img_rl_q_learning_fapprox_update_rule.png
+[img_rl_q_learning_fapprox_algorithm]: imgs/img_rl_q_learning_fapprox_algorithm.png
+
+[img_dqn_exp_replay_intuition]: https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_intuition.png
+[img_dqn_exp_replay_buffer]: https://wpumacay.github.io/research_blog/imgs/img_dqn_exp_replay_buffer.png
+[img_dqn_fixed_targets_1]: imgs/img_dqn_fixed_targets_1.png
+[img_dqn_fixed_targets_2]: imgs/img_dqn_fixed_targets_2.png
+[img_dqn_fixed_targets_3]: imgs/img_dqn_fixed_targets_3.png
+[img_dqn_soft_updates]: https://wpumacay.github.io/research_blog/imgs/img_dqn_soft_updates.png
+[img_dqn_grounding_terminal_states]: imgs/img_dqn_grounding_terminal_states.png
+[img_dqn_qnetwork_choices]: https://wpumacay.github.io/research_blog/imgs/img_dqn_qnetwork_choices.png
 [img_dqn_algorithm]: imgs/img_dqn_algorithm.png
+[img_network_architecture]: imgs/img_network_architecture.png
 
 <!-- URLS -->
 [url_project_1_post]: https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-navigation/
@@ -56,7 +74,8 @@ which discusses the following:
 
 In this section we give a brief description of the Deep Q-learning algorithm from [2], as our banana collector 
 agent is based on the DQN agent from that paper. This description is a brief adaptation from the overview we gave
-in [this][url_project_1_post_part_1] post (part 1, section 3).
+in [this][url_project_1_post_part_1] post (part 1, section 3). We gave an intro and various details in that post so 
+please, for further info about the algorithm refer to that post for a more detailed explanation.
 
 ### 1.1 Deep Q-learning overview
 
@@ -66,29 +85,206 @@ in [this][url_project_1_post_part_1] post (part 1, section 3).
 > approximator for this Q-function. The changes introduced in [2], namely **Experience Replay** and **Fixed Targets** 
 > help break correlations and stabilize learning, which are problems that vanilla Action-value function approximation has.
 
-Tabular Q-learning is an off-policy value-based RL method that solves for the optimal policy
+Q-learning is an off-policy model-free value-based RL method that solves for the optimal policy **Q\*(s,a)** via
+samples obtained from interactions with the environment. The Q-learning update rule used to update the q-value for a
+state-action pair (s,a) is shown in the following equation, and it tries to improve our estimates of the q-values for
+that pair by using another bootstrapped estimate (one-step look ahead) of the q-value.
 
+![q-learning-update-rule][img_rl_q_learning_update_rule]
 
-The tabular setup falls short when trying to scale up to more complicated environments. We could discretize and use
-the tabular approach, but still we would have problems, namely the 
+This update rule is used in the Tabular Q-learning algorithm, which is used when dealing with small discrete state
+and action spaces. In this setup we can easily store the values for each possible state-action pair (s,a) in a table
+called Q-table, and update them separately with the previous update rule as we get information from the environment.
+Below we show the Tabular Q-learning algorithm (adapted from [1]).
 
-So function approximation comes to the rescue
+![q-learning-algorithm][img_rl_q_learning_algorithm]
+
+Unfortunately, this tabular setup falls short when trying to scale up to more complicated environments, e.g. continuous
+state. We could discretize and use the tabular approach, but still we would have problems:
+
+* Our Q-table would explode exponentially as we select a smaller discretization (curse of dimensionality).
+* Our q-values would be updated separately, which is not that efficient nor "proper" as state-action pairs that
+  are close in state-action space should have similar q-values. For example, updating the (s,a) entry (1.001 m, 0.001 N.m), 
+  where **s** is x-distance and **a** is torque, would not propagate to entry (1.002 m, 0.002 N.m) at all (would leave it untouch).
+
+So we can alleviate these issues using function approximation comes to the rescue. In this setup we parametrize our 
+Q(s,a) with some function approximator and update this function approximator appropriately. The idea is that we would 
+pass a representation of the state **s** and the action to take (still in discrete action-space land) to this function 
+and it will evaluate the q-value for us. The representation we pass as input to our Q-function is usually some set of 
+features created from the state **s**  which our function can use. To avoid feature engineering we make use of deep 
+neural networks as function approximators with the hope that these networks will lean the appropriate internal representation
+required for the task at hand, and we would only need to pass the raw state (and still discrete action) to evalue the q-values.
+
+Let's derive the semi-gradient method for action-value function approximation using neural networks. We start by
+defining our Q-function as a parametrized function of a neural networks of weights &theta;, which we write using
+the notation **Q(s,a;&theta;)**. We then have to tweak the weights of the network appropriately. So, suppose we
+had access to the actual true q-values from **Q\***. We then just have to update our weights to fit these values,
+like in supervise learning. This can be written as an optimization problem, as shown in the following equation.
+
+![q-learning-fapprox-optimization-formulation][img_rl_q_learning_fapprox_optimization_formulation]
+
+We could just then, as in supervised learning, update our weights using the gradient of the loss defined previously,
+as shown below.
+
+![q-learning-fapprox-derivation][img_rl_q_learning_fapprox_derivation]
+
+If using SGD we would end up with the following update rule:
+
+![q-learning-fapprox-update-rule-with-oracle][img_rl_q_learning_fapprox_update_rule_with_oracle]
+
+We don't have access to these true q-values. Instead, we can make use the TD-target from Q-learning as an estimate of
+this true q-values. This would give us the following update rule.
+
+![q-learning-fapprox-update-rule][img_rl_q_learning_fapprox_update_rule]
+
+Putting it all together, we would end up with the following algorithm for Action-value function approximation.
+
+![q-learning-fapprox-algorithm][img_rl_q_learning_fapprox_algorithm]
 
 Unfortunately, there are no convergence guarantees, and just using function approximation often leads to bad results
-due to unstable learning.
+due to unstable learning. In this context, Deep Q-learning, introduced in [2] helps to solve some of these issues by
+introducing two mechanisms that break some specific type correlations during learning which help stabilize the learning
+process. These are explained below.
 
-Deep Q-learning, introduced in [2] helps to solve some of these issues by introducing two mechanisms that break some
-specific type correlations during learning.
+### **Experience replay**
 
-* correlations between ...
-* correlations between ...
+This mechanism consists of **Learning from past stored experiences during replay sessions**. Basically, we remember 
+our experiences in memory (called a replay buffer) and learn from them later. This allows us to make more efficient 
+use of past experiences by not throwing away samples right away, and it also helps to break one type of correlations:
+sequential correlations between experiences tuples. In the image below we try to depict this type of correlation by 
+showing 3 consecutive experience tuples along a trajectory. Assuming we are doing one gradient update with each tuple 
+using SGD we are then pushing our learned weights  according to the reward obtained (recall the td-target is used as a 
+true estimate for our algorithm). So, we are effectively pushing our weights using each sample, which in turn depended 
+on the previous one (both reward and next state) because of the same process happening a time step before (the weights 
+were pushed a bit using previous rewards).
 
+![dqn-exp-replay-intuition][img_dqn_exp_replay_intuition]
+
+To solve these issues, the Experience Replay mechanism makes the agent learn from
+minibatches of past stored experience during training steps. We basically put all
+our experience in memory and then sample uniformly at random from it, which helps 
+break the correlations between samples in the minibatch as they might not come 
+from consequent steps (or even come from different episodes). This is depicted in
+the image below.
+
+![dqn-exp-replay-buffer][img_dqn_exp_replay_buffer]
+
+
+### **Fixed Targets**
+
+During training we are using the TD-target as the estimate of the true q-values that our Q-network 
+should output for a specific pair (s,a) (as shown in the equation below). Unfortunately, this estimate 
+is being computed using the current parameters of the Q-network which effectively is forcing us to follow 
+a moving target. Besides, this is not mathematically correct, as we assumed these "true q-values" were
+not dependent on &theta; (recall we did not take the gradient of this term).
+
+![dqn-fixed-targets-eq-1][img_dqn_fixed_targets_1]
+
+To help training stability the authors of [2] introduced the use of a separate
+network to compute these targets called a **Target Network**, which is almost the same as
+the network used for taking actions. The key difference is that **the weights of 
+this network are only copied from the weights of the other network after some specific
+number of steps**. Therefore, the update rule can be modified as follows :
+
+![dqn-fixed-targets-eq-2][img_dqn_fixed_targets_2]
+
+A slight variation to this update at constant intervals is to do updates every time
+step using interpolations, as shown in the following equation :
+
+![dqn-fixed-targets-eq-3][img_dqn_fixed_targets_3]
+
+This are called soft-updates, and by adjusting the factor \\( \tau \\) (to some small 
+values) we get a similar effect of copying the weights of the networks after a fixed
+number of steps. The difference is that, as the name suggests, these updates are less
+jumpy than the hard-updates made by copying entirely the weights of the network. At convergence,
+this update is very similar to a hard-update as the network weights do not change too much.
+
+![dqn-soft-updates][img_dqn_soft_updates]
+
+By putting it all together we get the Deep Q-learning algorithm, which is show below:
 
 ![dqn-algorithm][img_dqn_algorithm]
 
+Some key considerations to take into account are listed below:
+
+### **Preprocessing** &phi;(s): 
+  This step consists in converting the states|observations **s(t)** received 
+  from the simulator into an appropriate state representation that can be used 
+  by our action-value network *Q(&phi;,a;&theta;)*. We usually receive 
+  observations from the environment which in some cases (if we are lucky) consist 
+  of the actual internal state representation of the world. Unfortunately, in 
+  most cases we only receive observations that do not permit to fully recover the 
+  internal state of the environment. To avoid this issue we can design a state
+  representation from these observations that would push us a bit more into the MDP
+  setting and not the POMDP setting (Partially Observable MDP). In [2] the authors
+  designed a state representation from the raw frame observations from the simulator
+  by stacking a group of 4 consecutive frames, which tries to help encode a bit of
+  temporal information (like speed and movement in the scene). This step is problem
+  specific, and in our Banana collector case we chose to use the direct observations
+  as state representation, although we could have made modifications to add more temporal
+  information which could help with the problem of *state aliasing*. For further information
+  on this topic you can watch part of [this](https://youtu.be/yPMkX_6-ESE?t=230) lecture from [7].
+
+### **Grounding terminal estimates** : 
+  Grounding the estimates for terminal states is important because we don't want
+  to make an estimate to the value for a terminal state bigger than what it could
+  actually be. If we are just one step away of a terminal state, then our trajectories
+  have length one and the return we obtain is actually only that reward. All previous 
+  algorithms do a check of whether or not a state is terminal in order to compute 
+  the appropriate TD-target. However, in tabular Q-learning you will find that in some 
+  implementations (unlike the one we presented earlier) there is no check similar to 
+  this one, but instead the entries of the Q-table are set to zeros for the terminal states, 
+  which is effectively the same as doing this check, as shown in the equation below:
+
+  ![dqn-grounding-terminal-states][img_dqn_grounding_terminal_states]
+
+  Unfortunaly, because we are dealing with function approximation, the estimates
+  for a terminal states if evaluated will not return always zero, even if we initialize
+  the function approximator to output zeros everywhere (like initializing the weights
+  of a neural network to all zeros). This is caused by the fact that changes in the
+  approximator parameters will affect the values of nearby states-action pairs in
+  state-action space as well even in the slightest. For further information, you could
+  check [this](https://youtu.be/fevMOp5TDQs?t=137) lecture by Volodymyr Mnih from [9].
+  So, keep this in mind when implementing your own version of DQN, as you might run 
+  into subtle bugs in your implementations.
+
+### **Exploration schedule** :
+  Another important detail to keep in mind is the amount of exploration allowed
+  by our &epsilon;-greedy mechanism, and how we reduce it as learning progresses.
+  This aspect is not only important in this context of function approximation, but in
+  general as it's a key tradeoff to take into account (exploration v.s. exploitation dilemma).
+  They idea is to give the agent a big enough number of steps to explore and get experiences
+  that actually land some diverse good and bad returns, and then start reducing this
+  ammount of exploration as learning progresses towards convergence. The mechanism
+  used in [2] is to *linearly* decay *&epsilon; = 1.0 -> 0.1*. Another
+  method would be to decay it *exponentially* by multiplying &epsilon; with a 
+  constant decay factor every episode. For further information you could check
+  [this](https://youtu.be/0g4j2k_Ggc4?t=805) lecture by David Silver from [6].
+
+### **Choice for Q(s,a;&theta;)**
+  The last detail is related to the actual choice we make how to model our Q-network.
+  We have two choices: either treat both inputs *s, a* as a single input *(s,a)*
+  to the network, which would allows us to compute one q-value for a given state-action 
+  pair, or use *s* as only input to the network and grab  all the q-values for 
+  all actions *a &isin; A*. Both of these options are shown in the figure below.
+  
+  ![dqn-qnetwork-choices][img_dqn_qnetwork_choices]
+
+  The first option would cost more as we need to compute all q-values in order
+  to grab the maximum of them for both the TD-target calculation and the &epsilon;-greedy
+  action selection. The second option was the one used in [2], and it's the one
+  will use for our implementation.
+
 ### 1.2 Q-network architecture
 
+As network architecture for our Q-network we chose to use 3 hidden fully connected layers (with ReLU activations) 
+and 1 output layer (with no activation). The input to our network would be the state representation for
+our agent (output of the preprocess step &phi;). For our case we simply used the raw state as input to our 
+network. This input (as explained in the README) consists of a rank-1 tensor of size 37. The output layer 
+outputs 4 q-values for each possible action in the environment (as explained in the README). The image below 
+shows this architecture.
 
+![network-architecture][img_network_architecture]
 
 ## 2. Implementation
 
@@ -1363,7 +1559,7 @@ run the provided bash scripts:
 
 ![results-submission-all-the-runs-std-pytorch][img_reulsts_submission_all_runs_pytorch_std]
 
-![results-submission-all-the-runs-std-tensorflow][img_reulsts_submission_all_runs_tensorflow_std]
+![results-submission-all-the-runs-std-tensorflow][img_results_submission_all_runs_tensorflow_std]
 
 ### 3.2 Experiments
 
