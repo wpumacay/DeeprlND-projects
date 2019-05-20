@@ -10,6 +10,7 @@
 [img_results_submission_all_runs]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs.png
 [img_reulsts_submission_all_runs_pytorch_std]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_pytorch_std.png
 [img_reulsts_submission_all_runs_tensorflow_std]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_tensorflow_std.png
+[img_dqn_algorithm]: imgs/img_dqn_algorithm.png
 
 <!-- URLS -->
 [url_project_1_post]: https://wpumacay.github.io/research_blog/posts/deeprlnd-project1-navigation/
@@ -19,19 +20,56 @@
 
 # Using DQN to solve the Banana environment from ML-Agents
 
-@Modifying intro from [post][url_project_1_post]
+This is an accompaying report for the project-1 submission. Below we list some key details we
+will cover in our submission:
+
+* [Agent description](#1-agent-description)
+    * [Deep Q-learning overview](#1.1-deep-q-learning-overview)
+    * [Q-network architecture](#1.2-q-network-architecture)
+    
+* [Implementation](#2-implementation)
+    * [Agent implementation](#2.1-agent)
+    * [Model implementation](#2.2-model)
+    * [Replay buffer implementation](#2.3-replay-buffer)
+    * [Trainer implementation](#2.4-trainer)
+    * [Choice of hyperparameters](#2.5-hyperparameters)
+
+* [Results](#3-results)
+    * [Submission results](#3.1-submission-results)
+    * [Experiments](#3.2-experiments)
+
+* [Future work](#4-future-work)
+
+This report is a brief adaptation (for the purposes of the submission review) of the overview 
+we gave in [this][url_project_1_post] blog post. If you have some time, I'd recommend checking
+the post ([part-1](url_project_1_post_part_1), [part-2](url_project_1_post_part_2), [part-3](url_project_1_post_part_3)), 
+which discusses the following:
+
+* [Part-1][url_project_1_post_part_1]: Description of the environment, code setup and Deep Q-learning overview.
+* [Part-2][url_project_1_post_part_2]: Implementation details, testing tips and hyperparameters chosen, and an overview of the results.
+* [Part-3][url_project_1_post_part_3]: Improvements overview (Double DQN and Prioritized Experience replay), implementation details, preliminary results, and final remarks.
 
 ## 1. Agent description
 
-@Modifying agent description from [post][url_project_1_post]
+In this section we give a brief description of the Deep Q-learning algorithm from [2], as our banana collector 
+agent is based on the DQN agent from that paper. This description is a brief adaptation from the overview we gave
+in [this][url_project_1_post_part_1] post (part 1, section 3).
 
-### 1.1 Algorithm (DQN)
+### 1.1 Deep Q-learning overview
+
+**TL;DR**
+> Deep Q-learning is an algorithm that builds on top of **Action-value function approximation** to recover
+> the optimal Action-value function **Q\*(s,a;&theta;)**, which is parametrized using a **Deep Neural Network** as function
+> approximator for this Q-function. The changes introduced in [2], namely **Experience Replay** and **Fixed Targets** 
+> help break correlations and stabilize learning, which are problems that vanilla Action-value function approximation has.
 
 
-### 1.2 Model architecture
+
+![dqn-algorithm][img_dqn_algorithm]
+
+### 1.2 Q-network architecture
 
 
-### 1.3 Hyperparameters
 
 ## 2. Implementation
 
@@ -47,6 +85,10 @@
 
 
 ### 2.4 Trainer
+
+
+### 2.5 Hyperparameters
+
 
 
 ## 3. Results
@@ -258,3 +300,22 @@ updates to this post:
   benchmarks like gym and ml-agents.
 
 * Implement recurent versions of DQN and test the implementation in various environments.
+
+## References
+
+* [1] Sutton, Richard & Barto, Andrew. [*Reinforcement Learning: An introduction.*](http://incompleteideas.net/book/RLbook2018.pdf)
+* [2] Mnih, Volodymyr & Kavukcuoglu, Koray & Silver, David, et. al.. [*Human-level control through deep-reinforcement learning*](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)
+* [3] Achiam, Josh. [Spinning Up in Deep RL](https://spinningup.openai.com/en/latest/index.html)
+* [4] Simonini, Thomas. [*A Free course in Deep Reinforcement Learning from beginner to expert*](https://simoninithomas.github.io/Deep_reinforcement_learning_Course/)
+* [5] [*Stanford RL course by Emma Brunskill*](https://www.youtube.com/playlist?list=PLoROMvodv4rOSOPzutgyCTapiGlY2Nd8u)
+* [6] [*UCL RL course, by David Silver*](https://www.youtube.com/playlist?list=PLqYmG7hTraZDM-OYHWgPebj2MfCFzFObQ)
+* [7] [UC Berkeley DeepRL course by Sergey Levine](http://rail.eecs.berkeley.edu/deeprlcourse/)
+* [8] [Udacity DeepRL Nanodegree](https://www.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893)
+* [9] [DeepRL bootcamp](https://sites.google.com/view/deep-rl-bootcamp/lectures)
+* [10] Van Hasselt, Hado. [*Double Q-learning*](https://papers.nips.cc/paper/3964-double-q-learning.pdf)
+* [11] Van Hasselt, Hado & Guez, Arthur & Silver, David. [*Deep Reinforccement Learning with Double Q-learning*](https://arxiv.org/abs/1509.06461)
+* [12] Schaul, Tom & Quan, John & Antonoglou, Ioannis & Silver, David. [*Prioritized Experience Replay*](https://arxiv.org/abs/1511.05952)
+* [13] Hacker Earth. [Segment Trees data structures](https://www.hackerearth.com/practice/data-structures/advanced-data-structures/segment-trees/tutorial/)
+* [14] OpenAI. [Baselines](https://github.com/openai/baselines)
+* [15] Hessel, Matteo & Modayil, Joseph & van Hasselt, Hado & Schaul, Tom & Ostrovski, Georg & Dabney, Will & Horgan, Dan & Piot, Bilal & Azar, Mohammad & Silver, David [Rainbow](https://arxiv.org/abs/1710.02298)
+* [16] Hausknecht, Matthew & Stone, Peter [Deep Recurrent Q-Learning with Partially Observable MDPs](https://arxiv.org/abs/1507.06527)
