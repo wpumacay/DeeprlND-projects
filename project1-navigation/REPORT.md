@@ -1537,6 +1537,9 @@ python trainer.py test --sessionId=banana_submission
 The weights of the trained agent are provided in the **results/banana_submission** folder,
 and are stored in the **banana_submission_model_pytorch.pth** file.
 
+Also, you can check [this](https://youtu.be/ng7e61LNNLs) video of a the pretrained 
+agent collecting bananas.
+
 ### 3.1 Submission results
 
 * **Single runs**: We choose one of the results of the various runs, plotted as time

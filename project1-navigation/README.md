@@ -335,7 +335,10 @@ python trainer_full.py --sessionId=gym_lunarlander --gym=LunarLander-v2
 
 ## References
 
+These are some code-references I used while implementing my DQN agent:
+
 * [Original DQN implementation](https://sites.google.com/a/deepmind.com/dqn/)
+* [DQN lunar-lander implementation from Udacity](https://github.com/udacity/deep-reinforcement-learning/tree/master/dqn/solution)
 * [OpenAI baselines PER implementation](https://github.com/openai/baselines/blob/master/baselines/deepq/)
 * [@Jaromiru PER implementation](https://github.com/jaromiru/AI-blog/blob/master/SumTree.py)
 * [@MorvanZhou PER implementation](https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow/blob/master/contents/5.2_Prioritized_Replay_DQN/RL_brain.py)
