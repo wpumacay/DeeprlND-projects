@@ -56,6 +56,7 @@ will cover in our submission:
     * [Choice of hyperparameters](#2.5-hyperparameters)
 
 * [Results](#3-results)
+    * [Running a pretrained agent](#3.0-running-a-pretrained-agent)
     * [Submission results](#3.1-submission-results)
     * [Experiments](#3.2-experiments)
 
