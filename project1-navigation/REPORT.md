@@ -107,19 +107,19 @@ state. We could discretize and use the tabular approach, but still we would have
   are close in state-action space should have similar q-values. For example, updating the (s,a) entry (1.001 m, 0.001 N.m), 
   where **s** is x-distance and **a** is torque, would not propagate to entry (1.002 m, 0.002 N.m) at all (would leave it untouch).
 
-So we can alleviate these issues using function approximation comes to the rescue. In this setup we parametrize our 
-Q(s,a) with some function approximator and update this function approximator appropriately. The idea is that we would 
-pass a representation of the state **s** and the action to take (still in discrete action-space land) to this function 
+So we can alleviate these issues using function approximation. In this setup we parametrize our  Q(s,a) with 
+some function approximator and update this function approximator appropriately. The idea is that we would pass a 
+representation of the state **s** and the action to take (still in discrete action-space land) to this function 
 and it will evaluate the q-value for us. The representation we pass as input to our Q-function is usually some set of 
 features created from the state **s**  which our function can use. To avoid feature engineering we make use of deep 
 neural networks as function approximators with the hope that these networks will lean the appropriate internal representation
-required for the task at hand, and we would only need to pass the raw state (and still discrete action) to evalue the q-values.
+required for the task at hand, and we would only need to pass the raw state (and still discrete action) to evaluate the q-values.
 
 Let's derive the semi-gradient method for action-value function approximation using neural networks. We start by
 defining our Q-function as a parametrized function of a neural networks of weights &theta;, which we write using
 the notation **Q(s,a;&theta;)**. We then have to tweak the weights of the network appropriately. So, suppose we
 had access to the actual true q-values from **Q\***. We then just have to update our weights to fit these values,
-like in supervise learning. This can be written as an optimization problem, as shown in the following equation.
+like in supervised learning. This can be written as an optimization problem, as shown in the following equation.
 
 ![q-learning-fapprox-optimization-formulation][img_rl_q_learning_fapprox_optimization_formulation]
 
@@ -128,12 +128,12 @@ as shown below.
 
 ![q-learning-fapprox-derivation][img_rl_q_learning_fapprox_derivation]
 
-If using SGD we would end up with the following update rule:
+If we use SGD we would end up with the following update rule:
 
 ![q-learning-fapprox-update-rule-with-oracle][img_rl_q_learning_fapprox_update_rule_with_oracle]
 
-We don't have access to these true q-values. Instead, we can make use the TD-target from Q-learning as an estimate of
-this true q-values. This would give us the following update rule.
+We don't have access to these true q-values. Instead, we can make use the TD-target from Q-learning as estimates of
+these true q-values. This would give us the following update rule.
 
 ![q-learning-fapprox-update-rule][img_rl_q_learning_fapprox_update_rule]
 
@@ -143,7 +143,7 @@ Putting it all together, we would end up with the following algorithm for Action
 
 Unfortunately, there are no convergence guarantees, and just using function approximation often leads to bad results
 due to unstable learning. In this context, Deep Q-learning, introduced in [2] helps to solve some of these issues by
-introducing two mechanisms that break some specific type correlations during learning which help stabilize the learning
+introducing two mechanisms that break some specific type correlations during learning, which help stabilize the learning
 process. These are explained below.
 
 ### **Experience replay**
@@ -193,7 +193,7 @@ step using interpolations, as shown in the following equation :
 
 ![dqn-fixed-targets-eq-3][img_dqn_fixed_targets_3]
 
-This are called soft-updates, and by adjusting the factor \\( \tau \\) (to some small 
+This are called soft-updates, and by adjusting the factor &tau; (to some small 
 values) we get a similar effect of copying the weights of the networks after a fixed
 number of steps. The difference is that, as the name suggests, these updates are less
 jumpy than the hard-updates made by copying entirely the weights of the network. At convergence,
@@ -468,10 +468,10 @@ class IDqnAgent( object ) :
 
 * The [**act**](https://github.com/wpumacay/DeeprlND-projects/blob/99830bc995552c2f6f3a54d8750fc660e9a8e89c/project1-navigation/navigation/dqn/core/agent.py#L127) 
   method is in charge of deciding which action to take in a given state. This takes
-  care of both the case of doing \\( \epsilon \\)-greedy during training, and taking
+  care of both the case of doing &epsilon;-greedy during training, and taking
   only the greedy action during inference. Note that in order to take the greedy
   actions we query the action-value network with the appropriate state representation
-  in order to get the Q-values required to apply the \\( \argmax \\) function
+  in order to get the Q-values required to apply the *argmax* function
 
 
 ```python
@@ -498,7 +498,7 @@ class IDqnAgent( object ) :
   tuples to the replay buffer, doing training every few steps (given by a frequency 
   hyperparameter), doing copies of weights (or soft-updates) to the target network 
   every few steps, doing some book keeping of the states, and applying the schedule
-  to \\( \epsilon \\) to control the ammount of exploration.
+  to &epsilon; to control the ammount of exploration.
 
 ```python
     def step( self, transition ) :
@@ -746,10 +746,9 @@ class IDqnModel( object ) :
   sure this evaluation **is not considered** for gradients computations. We make use of 
   [torch.no_grad](https://pytorch.org/docs/stable/autograd.html#torch.autograd.no_grad)
   to ensure this requirement.We only have to compute gradients w.r.t. the weights of 
-  the action-value network \\( Q_{\theta} \\) during the training step, which is 
+  the action-value network Q(.;&theta;) during the training step, which is 
   done automatically when the computation graph includes it for gradients computation 
-  when calling the network on the inputs $$\left \{ (s,a) \right \}$$ from the minibatch 
-  (see train method).
+  when calling the network on the inputs { (s,a) } from the minibatch (see train method).
 
 ```python
 class NetworkPytorchCustom( nn.Module ) :
@@ -1434,13 +1433,13 @@ provided for the Lunar Lander. We didn't run exhaustive tests (neither grid nor 
 search) to tune the hyperparameters, but just incrementally increased/decreased 
 some hyperparameters we considered important:
 
-* **Replay Buffer size**: too low of a replay buffer size (around \\( 10^{4} \\)) gave
+* **Replay Buffer size**: too low of a replay buffer size (around 10^4) gave
   us poor performance even though we made various changes in the other hyperparameters
   to make it work. We then decided to gradually increase it until it could more or less
-  solve the task, and finally set it at around \\( 10^{5} \\) in size.
+  solve the task, and finally set it at around 10^5 in size.
 
 * **Epsilon schedule**: We exponentially decreased exploration via a decay factor applied
-  at every end of episode, and keeping \\( \epsilon \\) fixed thereafter. Low exploration
+  at every end of episode, and keeping &epsilon; fixed thereafter. Low exploration
   over all training steps led to poor performance, so we gradually increased it until
   we started getting good performance. The calculations we made to consider how much to increase
   were based on for how long would the exploration be active (until fixed at a certain value),
