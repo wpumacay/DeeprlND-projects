@@ -178,8 +178,8 @@ def test( env, agent ) :
     else :
         _descriptions = agent.actionsDescs
 
-    _qViz = plot.QvaluesVisualizer( _descriptions )
-    _vViz = plot.TimeSeriesVisualizer()
+    ## _qViz = plot.QvaluesVisualizer( _descriptions )
+    ## _vViz = plot.TimeSeriesVisualizer()
 
     _ = input( 'Ready for testing. Press ENTER to continue' )
 
@@ -195,15 +195,13 @@ def test( env, agent ) :
         _goodBananas = 0
         _badBananas = 0
 
-        _ = input( 'Ready for testing. Press ENTER to continue' )
-
         while True :
             _action = agent.act( _state, inference = True )
             _state, _reward, _done, _ = env.step( _action )
 
             _qvalues = agent.actorModel.eval( agent._preprocess( _state ) )
-            _qViz.update( _qvalues )
-            _vViz.update( np.max( _qvalues ) )
+            ## _qViz.update( _qvalues )
+            ## _vViz.update( np.max( _qvalues ) )
 
             if GRIDWORLD or GYM :
                 env.render()

@@ -231,13 +231,24 @@ pip install tensorflow==1.12.0
 pip install tensorflow-gpu==1.12.0
 ```
 
-* Finally, install the navigation package using pip and the provided 
+* Install the navigation package using pip and the provided 
   [setup.py](https://github.com/wpumacay/DeeprlND-projects/blob/master/project1-navigation/setup.py) 
   file (make sure you are in the folder where the *setup.py* file is located).
 
 ```bash
 # install the navigation package and its dependencies using pip (dev mode to allow changes)
 pip install -e .
+```
+
+* Uncompress the executable downloaded previously into the executables folder in
+  the repository
+
+```bash
+cd executables/
+# copy the executable into the executables folder in the repository
+cp {PATH_TO_ZIPPED_EXECUTABLE}/Banana_Linux.zip ./
+# unzip it
+unzip Banana_Linux.zip
 ```
 
 * (Update|Optional) If you want to use the tensorflow implementation, you might run into a little problem
@@ -308,4 +319,16 @@ blog post), and these can be runned as follows:
 
 # make runs to get the results of the submission
 ./training_submission.sh
+```
+
+To run a pretrained banana-agent just run the following:
+
+```bash
+python trainer.py test --sessionId=banana_submission
+```
+
+To run a pretrained lunarlander-agent just run the following:
+
+```bash
+python trainer_full.py --sessionId=gym_lunarlander --gym=LunarLander-v2
 ```

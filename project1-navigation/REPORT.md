@@ -1524,6 +1524,17 @@ run the provided bash scripts:
 * **training_tests_2.sh** : to run the second experiment, related to how much the improvements (DDQN and PER) to DQN help.
 * **training_tests_3.sh** : to run the third experiment, to check if our implementations of DDQN and PER actually helps in some setups with little exploration.
 
+### 3.0 Running a pretrained agent
+
+We provide a trained agent (trained with the config_submission.json configuration).
+To use it, just run the following in your terminal:
+
+```bash
+python trainer.py test --sessionId=banana_submission
+```
+
+The weights of the trained agent are provided in the **results/banana_submission** folder,
+and are stored in the **banana_submission_model_pytorch.pth** file.
 
 ### 3.1 Submission results
 

@@ -1,4 +1,3 @@
-executables/
 *.pyc
 *.log
 .ipynb_checkpoints/
