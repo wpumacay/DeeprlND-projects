@@ -88,7 +88,7 @@ class UnityEnvWrapper( IUnityEnvWrapper ) :
                 got a batch of %d instead' % ( self._numAgents, len( _info.vector_observations ) )
 
         # return the full observations for all agents
-        return _info.vector_observations
+        return np.array( _info.vector_observations )
 
 
     def step( self, actions ) :
@@ -106,7 +106,9 @@ class UnityEnvWrapper( IUnityEnvWrapper ) :
         _rewards         = np.array( _stepInfo.rewards )
         _dones           = np.array( _stepInfo.local_done )
 
-        return _observations, _rewards, _dones, {}
+        return np.array( _observations ), \
+               np.array( _rewards ), \
+               np.array( _dones ), {}
 
 
     def close( self ) :
