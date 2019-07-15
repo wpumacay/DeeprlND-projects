@@ -1,0 +1,12 @@
+tqdm
+numpy
+matplotlib
+h5py
+pyglet
+box2d
+gym
+ipython
+ipykernel
+unityagents==0.4.0
+tensorboardX
+torch
