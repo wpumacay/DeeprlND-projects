@@ -60,7 +60,8 @@ class UnityEnvWrapper( IUnityEnvWrapper ) :
         self._uBrain = self._unityEnv.brains[ self._uBrainName ]
 
         # grab observation and action space sizes
-        self._uObservationSpaceShape = (self._uBrain.vector_observation_space_size,)
+        self._uObservationSpaceShape = (self._uBrain.num_stacked_vector_observations * 
+                                        self._uBrain.vector_observation_space_size,)
         self._uActionSpaceShape = (self._uBrain.vector_action_space_size,)
 
         # define the gym-like observation and action spaces (not sure of limits, so min-max of float32)
