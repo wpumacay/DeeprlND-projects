@@ -97,6 +97,7 @@ def train( env, agent, num_episodes = 2000 ) :
 def test( env, agent, num_episodes = 10 ) :
     progressbar = tqdm( range( 1, num_episodes + 1 ), desc = 'Testing>' )
 
+    agent.setMode( 'test' )
     agent.load()
 
     for iepisode in progressbar :
