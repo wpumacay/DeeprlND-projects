@@ -1,4 +1,5 @@
 
+import os
 import abc
 import numpy as np
 
@@ -75,7 +76,7 @@ class DDPGMlpModelBackboneActor( DDPGModelBackbonePytorch ) :
         self._fc1 = nn.Linear( self._config.inputShape[0], 256 )
         self._fc2 = nn.Linear( 256, 128 )
         self._fc3 = nn.Linear( 128, self._config.outputShape[0] )
-        
+
         if self._config.useBatchnorm :
             self._bn0 = nn.BatchNorm1d( self._config.inputShape[0] )
             self._bn1 = nn.BatchNorm1d( 256 )
@@ -223,11 +224,11 @@ class DDPGActor( model.IDDPGActor ) :
 
 
     def save( self ) :
-        torch.save( self._backbone.state_dict(), 'checkpoint_actor.pth' )
+        torch.save( self._backbone.state_dict(), os.path.join( self._savedir, 'checkpoint_actor.pth' ) )
 
 
     def load( self ) :
-        self._backbone.load_state_dict( torch.load( 'checkpoint_actor.pth' ) )
+        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_actor.pth' ) ) )
 
 
     def __call__( self, states ) :
@@ -305,11 +306,11 @@ class DDPGCritic( model.IDDPGCritic ) :
 
 
     def save( self ) :
-        torch.save( self._backbone.state_dict(), 'checkpoint_critic.pth' )
+        torch.save( self._backbone.state_dict(), os.path.join( self._savedir, 'checkpoint_critic.pth' ) )
 
 
     def load( self ) :
-        self._backbone.load_state_dict( torch.load( 'checkpoint_critic.pth' ) )
+        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_critic.pth' ) ) )
 
 
     def __call__( self, states, actions ) :

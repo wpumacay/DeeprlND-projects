@@ -3,6 +3,33 @@ import gin
 import copy
 import numpy as np
 
+@gin.configurable
+class DDPGTrainerConfig( object ) :
+    r"""Configuration options for the DDPG trainer
+
+    Args:
+        numTrainingEpisodes (int)   : number of episodes used for training
+        maxStepsInEpisode (int)     : maximum number of steps per episode
+        logWindowSize (int)         : size of the logging averaging window (in episodes)
+        seed (int)                  : seed for the random-number generators
+        sessionID (str)             : name of the session used for training, used as 
+                                      savedir or loaddir during training or testing respectively
+
+    """
+    def __init__( self,
+                  numTrainingEpisodes = 2000,
+                  maxStepsInEpisode = 3000,
+                  logWindowSize = 100,
+                  seed = 0,
+                  sessionID = 'session_default' ) :
+        super( DDPGTrainerConfig, self ).__init__()
+
+        self.numTrainingEpisodes    = numTrainingEpisodes
+        self.maxStepsInEpisode      = maxStepsInEpisode
+        self.logWindowSize          = logWindowSize
+        self.seed                   = seed
+        self.sessionID              = sessionID
+
 
 @gin.configurable
 class DDPGAgentConfig( object ) :

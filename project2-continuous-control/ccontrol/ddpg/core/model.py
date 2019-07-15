@@ -81,6 +81,7 @@ class IDDPGActor( abc.ABC ) :
         self._backbone = backbone
         self._learningRate = learningRate
         self._isTargetNetwork = False
+        self._savedir = './results/session_default'
 
 
     def setAsTargetNetwork( self, isTarget ) :
@@ -150,6 +151,16 @@ class IDDPGActor( abc.ABC ) :
         pass
 
 
+    def setSaveDir( self, savedir ) :
+        r"""Sets the directory where to save actor model
+
+        Args:
+            savedir (string) : folder where to save the actor model
+
+        """
+        self._savedir = savedir
+
+
     @abc.abstractmethod
     def save( self ) :
         r"""Saves the actor model into disk
@@ -196,6 +207,7 @@ class IDDPGCritic( abc.ABC ) :
         self._backbone = backbone
         self._learningRate = learningRate
         self._isTargetNetwork = False
+        self._savedir = './results/session_default'
 
 
     def setAsTargetNetwork( self, isTarget ) :
@@ -266,6 +278,16 @@ class IDDPGCritic( abc.ABC ) :
 
         """
         pass
+
+
+    def setSaveDir( self, savedir ) :
+        r"""Sets the directory where to save critic model
+
+        Args:
+            savedir (string) : folder where to save the critic model
+
+        """
+        self._savedir = savedir
 
 
     @abc.abstractmethod

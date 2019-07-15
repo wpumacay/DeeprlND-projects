@@ -43,6 +43,9 @@ class DDPGAgent( object ) :
         # keep the reference to the configuration object
         self._config = agentConfig
 
+        # directory where to save both actor and critic models
+        self._savedir = './results/session_default'
+
         # step counter
         self._istep = 0
 
@@ -208,6 +211,33 @@ class DDPGAgent( object ) :
         else :
             self._epsilon = max( 0.1, self._epsilon * self._config.epsilonFactorGeom )
 
+
+    def setSaveDir( self, savedir ) :
+        r"""Sets the directory where to save actor and critic weights
+
+        Args:
+            savedir (string) : folder where to save both actor and critic models
+
+        """
+        self._savedir = savedir
+        self._actor.setSaveDir( savedir )
+        self._critic.setSaveDir( savedir )
+
+
+    def load( self, savedir = None ) :
+        r"""Loads the actor and critic models from a save directory
+
+        Args:
+            savedir (str?) : directory where to load the models from. If None
+                             is given, then used own savedir
+
+        """
+        if savedir :
+            self._actor.setSaveDir( savedir )
+            self._critic.setSaveDir( savedir )
+
+        self._actor.load()
+        self._critic.load()
 
     @property
     def actor( self ) :

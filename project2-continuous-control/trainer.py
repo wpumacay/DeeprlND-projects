@@ -1,5 +1,6 @@
 
 import os
+import sys
 import gym
 import gin
 import random
@@ -13,6 +14,7 @@ from ccontrol.envs.mlagents import UnityEnvWrapper
 
 from ccontrol.ddpg.core.agent import DDPGAgent
 
+from ccontrol.ddpg.utils.config import DDPGTrainerConfig
 from ccontrol.ddpg.utils.config import DDPGAgentConfig
 from ccontrol.ddpg.utils.config import DDPGModelBackboneConfig
 
@@ -24,7 +26,7 @@ from ccontrol.ddpg.models.pytorch import DDPGCritic
 
 from IPython.core.debugger import set_trace
 
-TRAIN                   = True      # whether or not to train our agent
+TRAIN                   = False      # whether or not to train our agent
 LOG_WINDOW              = 100       # size of the smoothing window and logging window
 TRAINING_EPISODES       = 2000      # number of training episodes
 MAX_STEPS_IN_EPISODE    = 3000      # maximum number of steps in an episode
@@ -89,35 +91,65 @@ def train( env, agent, num_episodes = 2000 ) :
         writer.add_scalar( 'buffer_size', len( agent.replayBuffer ), iepisode )
         writer.add_scalar( 'epsilon', agent.epsilon, iepisode )
 
+    agent.save()
+
 
 def test( env, agent, num_episodes = 10 ) :
+    progressbar = tqdm( range( 1, num_episodes + 1 ), desc = 'Testing>' )
+
     agent.load()
 
-    for _ in tqdm( range( num_episodes ), desc = 'Testing> ' ) :
-        _done = False
+    for iepisode in progressbar :
+        _score = 0.
         _ss = env.reset()
 
-        while not _done :
+        while True :
             _aa = agent.act( _ss )
             _ss, _rr, _dd, _ = env.step( _aa )
             env.render()
 
+            _score += np.mean( _rr )
+
+            if _dd.any() :
+                break
+
+        progressbar.set_description( 'Testing> score: %.2f' % _score )
+        progressbar.refresh()
+
 
 if __name__ == '__main__' :
-    executableFullPath = './executables/Reacher_Linux_multi/Reacher.x86_64'
-    numberOfAgents = 20
+    parser = argparse.ArgumentParser()
+    parser.add_argument( 'mode', help='mode to run the script (train|test)', type=str, choices=['train','test'], default='train' )
+    parser.add_argument( '--config', help='gin-config file with the trainer configuration', type=str, default='./configs/ddpg_reacher_multi_default.gin' )
 
-    env = UnityEnvWrapper( executableFullPath,
-                           numAgents = numberOfAgents, mode = 'training', workerID = 1, seed = 0 )
+    args = parser.parse_args()
 
-    gin.parse_config_file( './configs/ddpg_reacher_multi.gin' )
+    gin.parse_config_file( args.config )
+
+    # grab training mode
+    TRAIN = ( args.mode == 'train' )
 
     # grab configuration from gin
+    trainerConfig = DDPGTrainerConfig()
+    agentConfig = DDPGAgentConfig()
     with gin.config_scope( 'actor' ) :
         actorBackboneConfig = DDPGModelBackboneConfig()
     with gin.config_scope( 'critic' ) :
         criticBackboneConfig = DDPGModelBackboneConfig()
-    agentConfig = DDPGAgentConfig()
+
+    executableFullPath = './executables/Reacher_Linux_multi/Reacher.x86_64'
+    numberOfAgents = 20
+
+    env = UnityEnvWrapper( executableFullPath,
+                           numAgents = numberOfAgents, 
+                           mode = 'training' if TRAIN else 'testing', 
+                           workerID = 1, 
+                           seed = trainerConfig.seed )
+
+    # in case the results directory for this session does not exist, create a new one
+    _sessionfolder = os.path.join( './results', trainerConfig.sessionID )
+    if not os.path.exists( _sessionfolder ) :
+        os.makedirs( _sessionfolder )
 
     # create the backbones for both actor and critic
     actorBackbone = DDPGMlpModelBackboneActor( actorBackboneConfig )
@@ -129,10 +161,11 @@ if __name__ == '__main__' :
 
     # create the agent
     agent = DDPGAgent( agentConfig, actor, critic )
+    agent.setSaveDir( _sessionfolder )
 
-    env.seed( 0 )
-    random.seed( 0 )
-    np.random.seed( 0 )
+    env.seed( trainerConfig.seed )
+    random.seed( trainerConfig.seed )
+    np.random.seed( trainerConfig.seed )
 
     if TRAIN :
         train( env, agent )

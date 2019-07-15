@@ -7,7 +7,7 @@ ccontrol.ddpg.utils.config.DDPGTrainerConfig.numTrainingEpisodes    = 2000
 ccontrol.ddpg.utils.config.DDPGTrainerConfig.maxStepsInEpisode      = 3000
 ccontrol.ddpg.utils.config.DDPGTrainerConfig.logWindowSize          = 100
 ccontrol.ddpg.utils.config.DDPGTrainerConfig.seed                   = %SEED
-ccontrol.ddpg.utils.config.DDPGTrainerConfig.sessionID              = 'submission_1'
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.sessionID              = 'session_default'
 
 ccontrol.ddpg.utils.config.DDPGAgentConfig.observationsShape        = (33,)
 ccontrol.ddpg.utils.config.DDPGAgentConfig.actionsShape             = (4,)
