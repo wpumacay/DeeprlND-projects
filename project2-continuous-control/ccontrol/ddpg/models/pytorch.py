@@ -7,6 +7,7 @@ from ccontrol.ddpg.core import model
 
 import torch
 from torch import nn
+from torch import autograd
 from torch import optim as opt
 from torch.functional import F
 
@@ -179,36 +180,38 @@ class DDPGActor( model.IDDPGActor ) :
 
 
     def eval( self, state ) :
-        # transform to torch tensors
-        state = torch.from_numpy( state ).float().to( self._device )
-
-        if not self._isTargetNetwork :
-            # set in evaluation mode, as we might be using batch-norm
-            self._backbone.eval()
-
-        # do not compute gradients for the actor just yet
-        with torch.no_grad() :
-            _action = self._backbone( [state] )
-
-        if not self._isTargetNetwork :
-            # get back to training mode, as we might be using batch-norm
-            self._backbone.train()
-
-        return _action.cpu().data.numpy()
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            state = torch.from_numpy( state ).float().to( self._device )
+    
+            if not self._isTargetNetwork :
+                # set in evaluation mode, as we might be using batch-norm
+                self._backbone.eval()
+    
+            # do not compute gradients for the actor just yet
+            with torch.no_grad() :
+                _action = self._backbone( [state] )
+    
+            if not self._isTargetNetwork :
+                # get back to training mode, as we might be using batch-norm
+                self._backbone.train()
+    
+            return _action.cpu().data.numpy()
 
 
     def train( self, states, critic ) :
-        # transform to torch tensors
-        states = torch.from_numpy( states ).float().to( self._device )
-
-        self._optimizer.zero_grad()
-        # compute actions taken in these states by the actor
-        _actionsPred = self._backbone( [states] )
-        # compose the critic over the actor outputs (sandwich), which effectively does g(f(x))
-        _lossActor = -critic( states, _actionsPred ).mean()
-        _lossActor.backward()
-        # take a step with the optimizer
-        self._optimizer.step()
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            states = torch.from_numpy( states ).float().to( self._device )
+    
+            self._optimizer.zero_grad()
+            # compute actions taken in these states by the actor
+            _actionsPred = self._backbone( [states] )
+            # compose the critic over the actor outputs (sandwich), which effectively does g(f(x))
+            _lossActor = -critic( states, _actionsPred ).mean()
+            _lossActor.backward()
+            # take a step with the optimizer
+            self._optimizer.step()
 
 
     def copy( self, other, tau = 1.0 ) :
@@ -253,44 +256,46 @@ class DDPGCritic( model.IDDPGCritic ) :
 
 
     def eval( self, state, action ) :
-        # transform to torch tensors
-        state = torch.from_numpy( state ).float().to( self._device )
-        action = torch.from_numpy( action ).float().to( self._device )
-
-        if not self._isTargetNetwork :
-            # set in evaluation mode, as we might be using batch-norm
-            self._backbone.eval()
-
-        # do not compute gradients for the critic in this stage
-        with torch.no_grad() :
-            _qvalue = self._backbone( [state, action] )
-
-        if not self._isTargetNetwork :
-            # get back to training mode, as we might be using batch-norm
-            self._backbone.train()
-
-        return _qvalue.cpu().data.numpy()
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            state = torch.from_numpy( state ).float().to( self._device )
+            action = torch.from_numpy( action ).float().to( self._device )
+    
+            if not self._isTargetNetwork :
+                # set in evaluation mode, as we might be using batch-norm
+                self._backbone.eval()
+    
+            # do not compute gradients for the critic in this stage
+            with torch.no_grad() :
+                _qvalue = self._backbone( [state, action] )
+    
+            if not self._isTargetNetwork :
+                # get back to training mode, as we might be using batch-norm
+                self._backbone.train()
+    
+            return _qvalue.cpu().data.numpy()
 
 
     def train( self, states, actions, qtargets ) :
-        # transform to torch tensors
-        states = torch.from_numpy( states ).float().to( self._device )
-        actions = torch.from_numpy( actions ).float().to( self._device )
-        qtargets = torch.from_numpy( qtargets ).float().to( self._device )
-
-        # compute q-values for Q(s,a), where s,a come from the given ...
-        # states and actions batches passed along the q-targets
-        _qvalues = self._backbone( [states, actions] )
-
-        # compute loss for the critic
-        self._optimizer.zero_grad()
-        _lossCritic = F.mse_loss( _qvalues, qtargets )
-        _lossCritic.backward()
-        if self._backbone.config.clipGradients :
-            nn.utils.clip_grad_norm( self._backbone.parameters(), 
-                                     self._backbone.config.gradientsClipNorm )
-        # take a step with the optimizer
-        self._optimizer.step()
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            states = torch.from_numpy( states ).float().to( self._device )
+            actions = torch.from_numpy( actions ).float().to( self._device )
+            qtargets = torch.from_numpy( qtargets ).float().to( self._device )
+    
+            # compute q-values for Q(s,a), where s,a come from the given ...
+            # states and actions batches passed along the q-targets
+            _qvalues = self._backbone( [states, actions] )
+    
+            # compute loss for the critic
+            self._optimizer.zero_grad()
+            _lossCritic = F.mse_loss( _qvalues, qtargets )
+            _lossCritic.backward()
+            if self._backbone.config.clipGradients :
+                nn.utils.clip_grad_norm( self._backbone.parameters(), 
+                                         self._backbone.config.gradientsClipNorm )
+            # take a step with the optimizer
+            self._optimizer.step()
 
 
     def copy( self, other, tau = 1.0 ) :

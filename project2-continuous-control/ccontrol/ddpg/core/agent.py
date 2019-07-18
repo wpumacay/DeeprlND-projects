@@ -61,10 +61,14 @@ class DDPGAgent( object ) :
                                                 self._config.seed )
         else :
             self._noiseProcess = noise.Normal( self._config.actionsShape,
-                                               self._config.noiseNormalStddev )
+                                               self._config.noiseNormalStddev,
+                                               self._config.seed )
 
         # epsilon factor used to adjust exploration noise
         self._epsilon = 1.0
+
+        ## # action scale factor
+        ## self._actionScaler = 0.8
 
         # mode of the agent, either train or test
         self._mode = 'train'
@@ -98,6 +102,7 @@ class DDPGAgent( object ) :
             _noise = np.array( [ self._epsilon * self._noiseProcess.sample() \
                                     for _ in range( len( state ) ) ] ).reshape( _action.shape )
             _action += _noise
+            ## _action = np.clip( _action, -self._actionScaler, self._actionScaler )
             _action = np.clip( _action, -1., 1. )
 
         return _action
@@ -125,7 +130,14 @@ class DDPGAgent( object ) :
             self._critic.save()
 
         self._istep += 1
-        
+
+        # update epsilon using the required schedule
+        if self._config.epsilonSchedule == 'linear' :
+            self._epsilon = max( 0.025, self._epsilon - self._config.epsilonFactorLinear )
+            ## self._actionScaler = min( 1.0, self._actionScaler + self._config.epsilonFactorLinear )
+        else :
+            self._epsilon = max( 0.025, self._epsilon * self._config.epsilonFactorGeom )
+            ## self._actionScaler = min( 1.0, self._actionScaler * self._config.epsilonFactorGeom )
 
     def _learn( self ) :
         r"""Takes a learning step on a batch from the replay buffer
@@ -204,12 +216,6 @@ class DDPGAgent( object ) :
         # 3) apply soft-updates using polyak averaging
         self._actorTarget.copy( self._actor, self._config.tau )
         self._criticTarget.copy( self._critic, self._config.tau )
-    
-        # 4) update epsilon using the required schedule
-        if self._config.epsilonSchedule == 'linear' :
-            self._epsilon = max( 0.1, self._epsilon - self._config.epsilonFactorLinear )
-        else :
-            self._epsilon = max( 0.1, self._epsilon * self._config.epsilonFactorGeom )
 
 
     def setSaveDir( self, savedir ) :
