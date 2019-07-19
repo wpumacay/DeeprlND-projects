@@ -16,6 +16,7 @@
 [img_rl_pg_stochastic_policy_gradient_theorem]: imgs/img_rl_pg_stochastic_policy_gradient_theorem.png
 [img_rl_pg_deterministic_policy_gradient_theorem]: imgs/img_rl_pg_deterministic_policy_gradient_theorem.png
 [img_rl_pg_log_likelihood_policy_gradient]: imgs/img_rl_pg_log_likelihood_policy_gradient.png
+[img_rl_pg_baselines]: imgs/img_rl_pg_baselines.png
 
 <!-- URLS -->
 
@@ -124,13 +125,83 @@ as shown below:
 
 ![pg-log-likelihood-policy-gradient][img_rl_pg_log_likelihood_policy_gradient]
 
+We can now compute this estimate of the gradient by using samples from our trajectories,
+namely state action pairs **(s,a)** where states **s** in the trajectory are samples 
+coming from d<sup>&pi;</sup>, and actions **a** are actions taken at that state sampled
+from the distribution given by the policy. 
+
+We have many options to compute Q<sup>&pi;(s,a)</sup>, and one such approach would be
+to compute an unbiased estimate of this value using the return G<sub>t</sub> (a Monte-Carlo
+estimate). This yields the REINFORCE algorithm, shown below:
+
 > **Algorithm: REINFORCE (Monte-Carlo policy gradients)**
 >  * Initialize the policy parameters &theta;
 >  * For *episode* = 0,1,2, ...
 >    * Generate an episode &tau; = (s<sub>0</sub>,a<sub>0</sub>,r<sub>1</sub>,...,s<sub>T-1</sub>,a<sub>T-1</sub>,r<sub>T</sub>) using policy &pi;<sub>&theta;</sub>
->    * For i = 1,...,T
+>    * For t = 0,...,T-1
+>       * Compute estimate of Q<sup>&pi;</sup>(s<sub>t</sub>,a<sub>t</sub>) using the return G<sub>t</sub> (MC estimate)
+>       * Update paremeters &theta; using gradient ascent: &theta;:= &theta; + &alpha; G<sub>t</sub> &nabla;<sub>&theta;</sub>log &pi;(a|s)
 
-### 1.2 Q-network architecture
+Another such variant comes from the fact that we can substract a term that depends
+only on the states **s** from the estimate of Q<sup>&pi;</sup> and we would still
+get an unbiased estimate. Such terms are called **baselines**, and the resulting terms
+after substracting the baselines are called **advantages**. The usage of baselines is
+that a good baseline can help reduce variance. Once such baseline could be the average 
+return, which is usually a good idea to use. The idea of a baseline is shown in the 
+equation below:
+
+![pg-baselines][img_rl_pg_baselines]
+
+Another option for the baseline could be a value-function **V<sub>&phi;</sub>(s)** 
+whose parameters we can learn by fitting to targets (either MC estimates or TD estimates).
+We could then go a bit further and use this value function to bootstrap the value of Q<sup>&pi;</sup>
+using a TD-estimate like in TD(0). In this case our value function becomes a **critic**
+and we end up with an actor critic algorithm. For example, one such variant (but 
+perhaps not good one due to convergence issues like in fitted Q-learning) is shown
+in the algorithm below:
+
+> **Algorithm: TD(0) Actor-Critic**
+>  * Initialize **actor** &pi;<sub>&theta;</sub>(a|s) and **critic** V<sub>&phi;</sub>(s)
+>  * For *episode* = 0,1,2, ...
+>    * Generate an episode &tau; = (s<sub>0</sub>,a<sub>0</sub>,r<sub>1</sub>,...,s<sub>T-1</sub>,a<sub>T-1</sub>,r<sub>T</sub>) using policy &pi;<sub>&theta;</sub>
+>    * For t = 0,...,T-1
+>       * Compute *Advantage Estimate* using TD(0) : A<sub>t</sub> = &delta;<sub>t</sub> = r<sub>t+1</sub> + &gamma;V<sub>&phi;</sub>(s<sub>t+1</sub>,a<sub>t+1</sub>) - V<sub>&phi;</sub>(s<sub>t</sub>)
+>       * Update paremeters &theta; using gradient ascent: &theta; := &theta; + &alpha; A<sub>t</sub> &nabla;<sub>&theta;</sub>log &pi;(a<sub>t</sub>|s<sub>t</sub>)
+>       * Update parameters &phi; using gradient descent on MSE-loss: &phi; := &phi; + &beta; &delta;<sub>t</sub> &nabla;<sub>&phi;</sub>V<sub>&phi;</sub>(s<sub>t</sub>)
+> 
+
+### **Deterministic Policy Gradients**
+
+Unlike the stochastic policies used earlier, what if we wanted to use a deterministic
+policy?. Let's say we have a deterministic policy &mu;<sub>&theta;</sub>(s) that we
+want to learn. Luckily, we can use the **Deterministic Policy Gradient Theorem**
+from [3], which give us a way of computing the gradient of our objective (still we 
+want to maximize expected return) w.r.t. the policy parameters &theta;, as follows:
+
+![pg-deterministic-policy-gradient-theorem][img_rl_pg_deterministic_policy_gradient_theorem]
+
+Notice that this gradient is the expectation of the gradient of the Q-function w.r.t.
+the action taken at state **s** (chosen by the policy &mu;<sub>&theta;</sub>) multiplied
+by the gradient of the policy, which resembles a kind of chain rule when using compositions
+like f(g(x)) (a fact that we will later use when we implement it using autodiff).
+
+The authors in [2] built on top of this result and the improvements presented by
+DQN in [4] to devise the **Deep Deterministic Policy Gradient** algorithm, in which
+we learn both an actor &mu;<sub>&theta;</sub>(s) and a critic Q<sub>&phi;</sub>(s,a)
+in a stable way using both **Experience Replay** and **Target Networks** from [4],
+and **Soft-Updates** (via Polyak averaging). The key features of this algorithm are
+the following:
+
+* The critic learns in a way similar to DQN, but instead of maximizing over actions 
+  to take the best Q-value, it uses actions given by the actor instead, avoiding 
+  having to do expensive optimization steps to compute *max<sub>a</sub> Q(s,a)*.
+
+* The actor learns by using the *deterministic policy gradient theorem*, using the
+  critic to compute the required gradients.
+
+
+
+### 1.2 Models architecture
 
 
 ## 2. Implementation
