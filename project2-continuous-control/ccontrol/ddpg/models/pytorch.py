@@ -322,3 +322,21 @@ class DDPGCritic( model.IDDPGCritic ) :
         return self._backbone( [states, actions] )
 
 ##----------------------------------------------------------------------------##
+
+if __name__ == '__main__' :
+    import gin
+    gin.parse_config_file( '../../../configs/ddpg_reacher_multi_default.gin' )
+
+    from ccontrol.ddpg.utils.config import DDPGModelBackboneConfig
+    with gin.config_scope( 'actor' ) :
+        _actorNetBackboneConfig = DDPGModelBackboneConfig()
+    with gin.config_scope( 'critic' ) :
+        _criticNetBackboneConfig = DDPGModelBackboneConfig()
+
+    print( '-------------------------- ACTOR --------------------------------' )
+    _actorNetBackbone = DDPGMlpModelBackboneActor( _actorNetBackboneConfig )
+    print( _actorNetBackbone )
+
+    print( '-------------------------- CRITIC -------------------------------' )
+    _criticNetBackbone = DDPGMlpModelBackboneCritic( _criticNetBackboneConfig )
+    print( _criticNetBackbone )
