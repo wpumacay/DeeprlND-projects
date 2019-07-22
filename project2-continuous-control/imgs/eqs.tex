@@ -1,0 +1,33 @@
+
+
+\begin{aligned}
+    \nabla_{\theta}J 
+    &= \mathbb{E}_{s \sim d^{\pi}} \left [ \sum_{a} Q^{\pi}(s,a) \nabla_{\theta}\pi(a|s) \right ] \\
+    &= \mathbb{E}_{s \sim d^{\pi}} \left [ \sum_{a} Q^{\pi}(s,a) \pi(a|s) \nabla_{\theta}log \pi(a|s) \right ] & \scriptstyle{\text{; By using likelihood-ratio trick } }\\
+    &= \mathbb{E}_{s \sim d^{\pi}} \left [ \sum_{a} \pi(a|s) Q^{\pi}(s,a) \nabla_{\theta}log \pi(a|s) \right ] & \scriptstyle{\text{; Rearranging terms as an expectation }}\\
+    &= \mathbb{E}_{s \sim d^{\pi}, a \sim \pi(.|s)} \left [ Q^{\pi}(s,a) \nabla_{\theta}log \pi(a|s) \right ]  & \scriptstyle{\text{; Replace with expectation over actions}} \\
+\end{aligned}
+
+    
+\begin{aligned}
+    \mathbb{E}_{s \sim d^{\pi}, a \sim \pi(.|s)} \left [ (Q^{\pi}(s,a) - b(s_{t})) \nabla_{\theta}log \pi(a|s) \right ]
+\end{aligned}
+
+\\
+\\
+\begin{aligned} 
+\triangleright B = \left \{ (s,a,s',r)^{(j)} \right \} \sim D && \scriptstyle{\text{; Sample minibatch from replay buffer}}
+\end{aligned}
+\\
+\\
+\begin{aligned}
+\triangleright y_{j} 
+     &= r^{(j)} + \gamma \max_{a'} Q_{\phi^{-}}(s'^{(j)},a'^{(j)}) \\
+     &= r^{(j)} + \gamma Q_{\phi^{-}}(s'^{(j)},\arg \max_{a'}Q(s'^{(j)},a'^{(j)})) \\
+     &\approx r^{(j)} + \gamma Q_{\phi^{-}}(s'^{(j)},\mu_{\theta^{-}}(s'^{(j)})) & \scriptstyle{\text{; Compute TD-targets}}\\
+\end{aligned}
+\\
+\\
+\begin{aligned} 
+\triangleright \phi = \arg \min_{\phi} \frac{1}{\vert B \vert} \sum_{j} \Vert y_{j} - Q_{\phi}(s^{(j)},a^{(j)}) \Vert^{2} && \scriptstyle{\text{; Fit Q-values to TD-targets}}
+\end{aligned}

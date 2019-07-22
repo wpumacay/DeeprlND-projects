@@ -45,7 +45,7 @@ with the following description:
 * Each agent moves its arm around by applying **actions** consisting of 4 torques
   applied to each of the 2 actuated joints (2 torques per joint).
 
-* Each agents get a **reward** of +0.1 each step its end effector is within the limits
+* Each agent gets a **reward** of +0.1 each step its end effector is within the limits
   of the goal. The environment is considered solved once the agent gets an average
   reward of +30 over 100 episodes.
 
@@ -113,7 +113,7 @@ The figure below shows these actions a bit more clearly:
 ![reacher-env-actions][img_reacher_environment_actions]
 
 Also, we can double check the meaning of these actions from the ml-agents implementation 
-in the Reacher agent in C#, which you can find [here](https://github.com/Unity-Technologies/ml-agents/blob/9b1a39982fd03de8f40f85d61f903e6d972fd2cc/UnitySDK/Assets/ML-Agents/Examples/Reacher/Scripts/ReacherAgent.cs#L53). 
+of the Reacher agent in C#, which you can find [here](https://github.com/Unity-Technologies/ml-agents/blob/9b1a39982fd03de8f40f85d61f903e6d972fd2cc/UnitySDK/Assets/ML-Agents/Examples/Reacher/Scripts/ReacherAgent.cs#L53). 
 Below we show a snippet of the implementation:
 
 ```CSharp
@@ -222,7 +222,7 @@ pip install torch
 pip install -e .
 ```
 
-* Uncompress the executable downloaded previously into the executables folder in
+* Finally, uncompress the executable downloaded previously into the executables folder in
   the repository
 
 ```bash

@@ -17,13 +17,22 @@
 [img_rl_pg_deterministic_policy_gradient_theorem]: imgs/img_rl_pg_deterministic_policy_gradient_theorem.png
 [img_rl_pg_log_likelihood_policy_gradient]: imgs/img_rl_pg_log_likelihood_policy_gradient.png
 [img_rl_pg_baselines]: imgs/img_rl_pg_baselines.png
+[img_rl_ddpg_learning_critic]: imgs/img_rl_ddpg_learning_critic.png
+[img_rl_ddpg_learning_actor]: imgs/img_rl_ddpg_learning_actor.png
+[img_rl_ddpg_algorithm]: imgs/img_rl_ddpg_algorithm.png
+[img_rl_ddpg_polyak_averaging]: imgs/img_rl_ddpg_polyak_averaging.png
+[img_rl_q_learning_ccontrol]: imgs/img_rl_q_learning_ccontrol.png
+[img_rl_ddpg_learning_maximizer]: imgs/img_rl_ddpg_learning_maximizer.png
+[img_ddpg_network_architecture_actor]: imgs/img_ddpg_network_architecture_actor.png
+[img_ddpg_network_architecture_critic]: imgs/img_ddpg_network_architecture_critic.png
 
 <!-- URLS -->
-
+[url_readme]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/README.md
+[url_torchsummary]: https://github.com/sksq96/pytorch-summary
 
 # Using DDPG to solve the Reacher environment from ML-Agents
 
-This is an accompaying report for the project-2 submission. Below we list some key details we
+This is an accompanying report for the project-2 submission. Below we list some key details we
 will cover in our submission:
 
 * [Agent description](#1-agent-description)
@@ -45,10 +54,10 @@ will cover in our submission:
 
 ## 1. Agent description
 
-In this section we give a brief description of the DDPG algorithm from [2], as our banana collector 
-agent is based on the DQN agent from that paper. This description is a brief adaptation from the overview we gave
-in [this][url_project_1_post_part_1] post (part 1, section 3). We gave an intro and various details in that post so 
-please, for further info about the algorithm refer to that post for a more detailed explanation.
+In this section we give a brief description of the DDPG algorithm from [2]. There 
+are various details to take into account in order to understand the algorithm properly, 
+so below I try to give a small overview that might be helpful to understand a bit 
+better the algorithm and contrast it with other policy based algorithms in the literature.
 
 ### 1.1 Deep Deterministic Policy Gradients overview
 
@@ -72,7 +81,7 @@ actor-critic RL method. Let's try to explain each part of this statement in more
   an action-value function to help learning. In various actor-critic methods this is used
   to reduce variance by not using MC estimates of the return to compute advantange estimates
   used for the gradient estimation of the objective. However, as we will see later, this is not
-  that similar to the stochastic policy case, and that's you could actually call this an approximate
+  that similar to the stochastic policy case, and that's why you could actually call this an approximate
   version of DQN instead of an actual actor-critic algorithm.
 
 * **Model-free**: We do not need access to the dynamics of the environment. This algorithm
@@ -196,30 +205,140 @@ the following:
   to take the best Q-value, it uses actions given by the actor instead, avoiding 
   having to do expensive optimization steps to compute *max<sub>a</sub> Q(s,a)*.
 
+![ddpg-learning-critic][img_rl_ddpg_learning_critic]
+
 * The actor learns by using the *deterministic policy gradient theorem*, using the
-  critic to compute the required gradients.
+  critic to compute the required gradients. Notice that we compound the actor inside
+  the critic in the theorem expression to make it easier for Deep Learning packages
+  to compute the gradient using autodiff.
 
+![ddpg-learning-actor][img_rl_ddpg_learning_actor]
 
+* Instead of updating the target networks at a certain frequency (hard-updates),
+  the authors proposed to use **Polyak averaging** to softly update the target
+  networks (for both actor and critic).
+
+![ddpg-polyak-averaging][img_rl_ddpg_polyak_averaging]
+
+By combining all these features, and the use of batch normalization for the networks
+to improve learning, we get the DDPG algorithm from [2]:
+
+![ddpg-algorithm][img_rl_ddpg_algorithm]
+
+### **An approximate version of DQN**
+
+It's useful to think of the DDPG algorithm as an approximate version of the DQN
+algorithm for continuous actions spaces. Recall the problem we had when trying to 
+use Value-based methods for continuous action spaces: it requires to solve an optimization
+problem to get an action from the q-function.
+
+![ddpg-q-learning-issue][img_rl_q_learning_ccontrol]
+
+One approach to avoid this maximization step (which would be costly, and would be
+required every learning step) is to **learn a maximizer** (the actor):
+
+![ddpg-learning-maximizer][img_rl_ddpg_learning_maximizer]
+
+So, it's like we were actually still using DQN, but "adapted" for continuous action
+spaces by learning a maximizer to evaluate the actions for the Critic. As we will
+see in the implementation section, the code for our DDPG agent is very similar to
+the DQN code from the previous project, with the difference that we now have an actor
+&mu;<sub>&theta;</sub>(s), which brings two more networks (including its corresponding
+target network) to our implementation.
 
 ### 1.2 Models architecture
 
+As starting we decided to use similar architectures to the ones presented in the
+example code provided by udacity, with the small difference in the amount and size
+of the layers used, and the usage of **Batch Normalization** as in the original DDPG
+paper, which was also suggested in various forums.
+
+### **Actor-network architecture**
+
+Our actor consist of a deterministic policy, so instead of producing as outputs
+the parameters of a distribution of a stochastic policy (like the mean and stddev
+of a gaussian) or similar, it outputs an action from the action space as a one-to-one
+mapping. 
+
+As we saw in the [README.md][url_readme], our environment consists of an observation
+space of vector observations of 33 dimensions (rank-1 tensor of size 33), and an action
+space of vector actions of 4 dimensions (rank-1 tensor of size 4). Hence, our network
+has as inputs vectors of size 33, and outputs of size 4. In between there are fully
+connected layers with ReLU activations and Batch Normalization layers just before
+the activations (except at the inputs, where we use batchnorm right away on the inputs).
+Below we show an image of the architecture, and also a small summary of the network
+printed using [torchsummary][url_torchsummary].
+
+![ddpg-actor-model-architecture][img_ddpg_network_architecture_actor]
+
+```
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+       BatchNorm1d-1                   [-1, 33]              66
+            Linear-2                  [-1, 256]           8,704
+       BatchNorm1d-3                  [-1, 256]             512
+            Linear-4                  [-1, 128]          32,896
+       BatchNorm1d-5                  [-1, 128]             256
+            Linear-6                    [-1, 4]             516
+================================================================
+Total params: 42,950
+Trainable params: 42,950
+Non-trainable params: 0
+----------------------------------------------------------------
+
+```
+
+### **Critic-network architecture**
+
+Our critic consists of a Q-network Q<sub>&phi;</sub>(s,a) that must combine both 
+states and actions pairs (or batches) and produce a single scalar (or batch of 
+scalars) as outputs representing the q-values for those pairs, unlike the DQN from
+the previous project (output all q-values for all actions)
+
+Our network receives as inputs the observations of the agent, it processes them
+using some layers (just one fully connected in this case) and then concatenates
+the hidden states in that layer and concatenates them with the actions taken by
+the agent into a single vector, and then continues processing it using two fully
+connected layers. Batchnorm is only used for the inputs in this case, as it worked
+well in our first experiments. At first we used batchnorm in all layers, as in the
+actor network, but after some tuning and changes to the architecture, we ended up
+having a working architecture for the task that had fewer layers and with less tricks
+as possible (the one we show in the image below).
+
+![ddpg-critic-model-architecture][img_ddpg_network_architecture_critic]
+
+```
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+       BatchNorm1d-1                   [-1, 33]              66
+            Linear-2                  [-1, 128]           4,352
+            Linear-3                  [-1, 128]          17,024
+            Linear-4                    [-1, 1]             129
+================================================================
+Total params: 21,571
+Trainable params: 21,571
+Non-trainable params: 0
+----------------------------------------------------------------
+```
 
 ## 2. Implementation
 
+In this section we give a brief description of our implementation of DDPG, which 
+is based in the algorithm presented in [2], and in various DDPG implementations online,
+like [4] and [5].
 
 ### 2.1 Agent
 
 
-### 2.2 Model
+### 2.2 Models
 
 
-### 2.3 Replay buffer
+### 2.3 Trainer
 
 
-### 2.4 Trainer
-
-
-### 2.5 Hyperparameters
+### 2.4 Hyperparameters
 
 
 ## 3. Results
@@ -257,4 +376,10 @@ updates to this post:
 ## References
 
 * [1] Sutton, Richard & Barto, Andrew. [*Reinforcement Learning: An introduction.*](http://incompleteideas.net/book/RLbook2018.pdf)
-* [2] 
+* [2][*Continuous control through deep reinforcement learning* paper by Lillicrap et. al.](https://arxiv.org/pdf/1509.02971.pdf)
+* [3][*Deterministic Policy Gradients Algorithms* paper by Silver et. al.](http://proceedings.mlr.press/v32/silver14.pdf)
+* [4][DDPG implementation from Udacity](https://github.com/udacity/deep-reinforcement-learning/tree/master/ddpg-pendulum)
+* [5][Post on *Deep Deterministic Policy Gradients* from OpenAI's **Spinning Up in RL**](https://spinningup.openai.com/en/latest/algorithms/ddpg.html)
+* [6][Post on *Policy Gradient Algorithms* by **Lilian Weng**](https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html)
+* [7][*Lecture 8: Advanced Q-Learning Algorithms* from Berkeley's cs294 DeepRL course](https://youtu.be/hP1UHU_1xEQ?t=4365)
+* [8] [Udacity DeepRL Nanodegree](https://www.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893)
