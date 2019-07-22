@@ -29,6 +29,32 @@
 <!-- URLS -->
 [url_readme]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/README.md
 [url_torchsummary]: https://github.com/sksq96/pytorch-summary
+[url_stable_baselines]: https://github.com/hill-a/stable-baselines
+
+[url_impl_agent]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/core/agent.py
+[url_impl_models_interface]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/core/model.py
+[url_impl_models_pytorch]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/models/pytorch.py
+[url_impl_config]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/utils/config.py
+[url_impl_util_replay_buffer]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/utils/replaybuffer.py
+[url_impl_util_noise]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/utils/noise.py
+[url_impl_util_env_wrapper]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/envs/mlagents.py
+[url_impl_trainer]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/trainer.py
+
+[url_agent_method_constructor]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/core/agent.py#L28
+[url_agent_method_act]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/core/agent.py#L87
+[url_agent_method_update]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/core/agent.py#L111
+[url_agent_method_learn]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/core/agent.py#L142
+
+[url_models_core_backbone]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/core/model.py#L10
+[url_models_core_actor_head]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/core/model.py#L65
+[url_models_core_critic_head]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/core/model.py#L189
+
+[url_pytorch_base_backbone]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L29
+[url_pytorch_actor_backbone]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L72
+[url_pytorch_critic_backbone]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L116
+
+[url_pytorch_actor_head]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L170
+[url_pytorch_critic_head]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L246
 
 # Using DDPG to solve the Reacher environment from ML-Agents
 
@@ -327,18 +353,974 @@ Non-trainable params: 0
 
 In this section we give a brief description of our implementation of DDPG, which 
 is based in the algorithm presented in [2], and in various DDPG implementations online,
-like [4] and [5].
+like [4] and [5]. We followed a similar approach to the previous projects and decided 
+to abstract away some of the functionality of the agent and models (based also in some
+rl-frameworks online, like [this][url_stable_baselines] one). The implementation consists 
+of the following components:
 
-### 2.1 Agent
+* **Agent** : Base DDPG agent class, which instantiates all components and implements DDPG.
+* **Model** : Abstract classes (interfaces) from which backend-specific models will inherit.
+* **Config** : Configuration structures linked with the [gin-config][url_gin_config] package 
+               to easily use, tweak and share hyperparameters.
+* **Trainer** : Script in charge of loading configuration structures, instantiating both
+                environment and agent, implementing the training loop, and using the required
+                logging functionality to save training results.
+
+Below we give a more detailed explanation of these components:
+
+### 2.1 **Agent**
+
+**Implementation: [agent.py][url_impl_agent]**
+
+The agent implementation consists of a base class container that composes all functionality
+required for our DDPG agent (networks, noise process, replay buffer, etc.) and implements
+the DDPG algorithm at a high-level, delegating various backend-specific operations to the
+appropriate implementations, like pytorch implementations of the models. Let's see each part
+of the implementation in more detail:
+
+* First, the constructor of the agent is in charge of creating and composing all required 
+  components for our DDPG implementation. It receives a configuration structure with some
+  hyperparameters, and also receives the created actor and critic models which will be used
+  for the DDPG algorithm. Notice we create the corresponding target networks for both actor
+  and critic. We then create the requested noise process, either by using a Ornstein-Uhlenbeck 
+  process, or just a simple normal distribution noise sampler. Also, we create the replay buffer,
+  which in this case is a simple Circular Replay Buffer (no priority for now).
+
+```python
+class DDPGAgent( object ) : 
+    r"""DDPG core agent class
+
+    Implements a DDPG agent as in the paper 'Continuous control with deep reinforcement learning'
+    by Lillicrap et. al., which implements an approximate DQN for continuous action
+    spaces by making an 'actor' that approximates the maximizer used for a 'critic'. Both
+    are trained using off-policy data from an exploratory policy based on the actor.
+
+    Args:
+        config (config.DDPGAgentConfig) : configuration object for this agent
+        actorModel (model.IDDPGActor)   : model used for the actor of the ddpg-agent
+        criticModel (model.IDDPGCritic) : model used for the critic of the ddpg agent
+
+    """
+    def __init__( self, agentConfig, actorModel, criticModel ) :
+        super( DDPGAgent, self ).__init__()
+
+        # keep the references to both actor and critic
+        self._actor = actorModel
+        self._critic = criticModel
+        # and create some copies for the target networks
+        self._actorTarget = self._actor.clone()
+        self._criticTarget = self._critic.clone()
+        # hint these target networks that they are actual target networks,
+        # which is kind of a HACK to ensure batchnorm is called during eval
+        # when using these networks to compute some required tensors
+        self._actorTarget.setAsTargetNetwork( True )
+        self._criticTarget.setAsTargetNetwork( True )
+
+        # keep the reference to the configuration object
+        self._config = agentConfig
+
+        # directory where to save both actor and critic models
+        self._savedir = './results/session_default'
+
+        # step counter
+        self._istep = 0
+
+        # replay buffer to be used
+        self._rbuffer = replaybuffer.DDPGReplayBuffer( self._config.replayBufferSize )
+
+        # noise generator to be used
+        if self._config.noiseType == 'ounoise' :
+            self._noiseProcess = noise.OUNoise( self._config.actionsShape,
+                                                self._config.noiseOUMu,
+                                                self._config.noiseOUTheta,
+                                                self._config.noiseOUSigma,
+                                                self._config.seed )
+        else :
+            self._noiseProcess = noise.Normal( self._config.actionsShape,
+                                               self._config.noiseNormalStddev,
+                                               self._config.seed )
+
+        # epsilon factor used to adjust exploration noise
+        self._epsilon = 1.0
+
+        # mode of the agent, either train or test
+        self._mode = 'train'
+```
+
+* The next important method is the [**act**][url_agent_method_act], which is in
+  charge of picking an action by using the actor and the state information given
+  as inputs to the method. During testing we make sure to add some noise to help 
+  with exploration. The noise is then annealed to a small value over the training
+  period, in a similar way to the e-greedy schedule we had for DQN in the previous
+  project.
+
+```python
+    def act( self, state ) :
+        r"""Returns an action to take in state(s) 'state'
+
+        Args:
+            state (np.ndarray) : state (batch of states) to be evaluated by the actor
+
+        Returns:
+            (np.ndarray) : action (batch of actions) to be taken at that situation
+
+        """
+        assert state.ndim > 1, 'ERROR> state should have a batch dimension (even if it is a single state)'
+
+        _action = self._actor.eval( state )
+        # during training add some noise (per action in the batch, to incentivize more exploration)
+        if self._mode == 'train' :
+            _noise = np.array( [ self._epsilon * self._noiseProcess.sample() \
+                                    for _ in range( len( state ) ) ] ).reshape( _action.shape )
+            _action += _noise
+            _action = np.clip( _action, -1., 1. )
+
+        return _action
+```
+
+* The [**update**][url_agent_method_update] is in charge of handling the logic of the
+  DDPG algorithm, like storing transitions in the replay buffer, checking when to take
+  a learning step and updating the noise scaler using the appropriate schedule. We also
+  save the models for both actor and critic just in case.
 
 
-### 2.2 Models
+```python
+    def update( self, transitions ) :
+        r"""Updates the internals of the agent given some new batch of transitions
+
+        Args:
+            transitions (list) : a batch of transitions of the form (s,a,r,s',done)
+
+        """
+        for transition in transitions :
+            self._rbuffer.store( transition )
+
+        if self._istep >= self._config.trainingStartingStep and \
+           self._istep % self._config.trainFrequencySteps == 0 and \
+           len( self._rbuffer ) > self._config.batchSize :
+            # do the required number of learning steps
+            for _ in range( self._config.trainNumLearningSteps ) :
+                self._learn()
+
+            # save the current model
+            self._actor.save()
+            self._critic.save()
+
+        self._istep += 1
+
+        # update epsilon using the required schedule
+        if self._config.epsilonSchedule == 'linear' :
+            self._epsilon = max( 0.025, self._epsilon - self._config.epsilonFactorLinear )
+            ## self._actionScaler = min( 1.0, self._actionScaler + self._config.epsilonFactorLinear )
+        else :
+            self._epsilon = max( 0.025, self._epsilon * self._config.epsilonFactorGeom )
+            ## self._actionScaler = min( 1.0, self._actionScaler * self._config.epsilonFactorGeom )
+```
+
+* The [**learn**][url_agent_method_learn] is in charge of implementing the following high-level 
+  parts of the learning step of the DDPG algorithm:
+
+    * Grabbing a minibatch of experience from the replay buffer.
+    * Delegating learning updates of the critic network to its appropriate backend implementation.
+    * Delegating learning updates of the actor network to its appropriate backend implementation.
+    * Delegating target-network updates of both actor and critic to their appropriate backend implementations.
+
+```python
+    def _learn( self ) :
+        r"""Takes a learning step on a batch from the replay buffer
+
+        """
+        # 0) grab some experience tuples from the replay buffer
+        _states, _actions, _rewards, _statesNext, _dones = self._rbuffer.sample( self._config.batchSize )
+
+        # 1) train the critic (fit q-values to q-targets)
+        #
+        #   minimize mse-loss of current q-value estimations and the ...
+        #   corresponding TD(0)-estimates used as "true" q-values
+        #
+        #   * pi  -> actor parametrized by weights "theta"
+        #       theta
+        #
+        #   * pi  -> actor target parametrized by weights "theta-t"
+        #       theta-t
+        #
+        #   * Q   -> critic parametrized by weights "phi"
+        #      phi
+        #
+        #   * Q   -> critic-target parametrized by weights "phi-t"
+        #      phi-t
+        #                           __                 ___                          2
+        #   phi := phi + lrCritic * \/    ( 1 / |B| )  \    || Qhat(s,a) - Q(s,a) ||
+        #                             phi              /__
+        #                                         (s,a,r,s',d) in B
+        #
+        #   where:
+        #      * Q(s,a) = Q (s,a) -> q-values from the critic
+        #                phi
+        #
+        #      * a' = pi(s') -> max. actions from the target actor
+        #               theta-t
+        #
+        #      * Qhat(s,a) = r + (1 - d) * gamma * Q (s',a') -> q-targets from the target critic
+        #                                           phi-t
+        #
+        # so: compute q-target, and used them as true labels in a supervised-ish learning process
+        #
+        _actionsNext = self._actorTarget.eval( _statesNext )
+        _qtargets = _rewards + ( 1. - _dones ) * self._config.gamma * self._criticTarget.eval( _statesNext, _actionsNext )
+        self._critic.train( _states, _actions, _qtargets )
+
+        # 2) train the actor (its gradient comes from the critic in a pathwise way)
+        #
+        #   compute gradients for the actor from gradients of the critic ...
+        #   based on the deterministic policy gradients theorem:
+        #
+        #   dJ / d = E [ dQ / du * du / dtheta ]
+        #
+        #   __            __  
+        #   \/  J   = E [ \/     Q( s, a ) |  ]
+        #     theta        theta  phi      |s=st, a=pi(st)
+        #                                             theta
+        #
+        #   which can be further reduced to :
+        #
+        #   __            __                            __
+        #   \/  J   = E [ \/  Q( s, a ) |               \/  pi(s) |  ]
+        #     theta        a   phi      |s=st, a=pi(st)   theta   |s=st
+        #                                         theta
+        #
+        #   so: compute gradients of the actor from one of the expression above:
+        #
+        #    * for pytorch: just do composition Q(s,pi(s)), like f(g(x)), ...
+        #                   and let pytorch's autograd do the job of ...
+        #                   computing df/dg * dg/dx
+        #
+        #    * for tensorflow: compute gradients from both and combine them ...
+        #                      using tf ops and tf.gradients
+        #
+        self._actor.train( _states, self._critic )
+        
+        # 3) apply soft-updates using polyak averaging
+        self._actorTarget.copy( self._actor, self._config.tau )
+        self._criticTarget.copy( self._critic, self._config.tau )
+```
+
+### 2.2 **Models**
+
+**Implementation: 
+    * Interface: [model.py][url_impl_models_interface] | 
+    * Pytorch implementation: [pytorch.py][url_impl_models_pytorch]**
+
+We decided to separate the models in a similar way to the previous projects,
+by implementing both abstract and concrete model classes. We went a bit further
+and tried to follow the implementation from various online rl-frameworks that
+separate the models in a more modular way to allow reuse. Following that approach
+we separate the model into two components:
+
+* **Backbone**: a component that implements the bulk of the network, like a multi-layer
+                perceptron, or a convolutional network like Resnet34.
+
+* **Head**: a container that wraps the backbone, and adds operations specific to
+            the algorithm to be implemented, e.g. implementing a DPG theorem-like
+            update for the actor, or implementing an update of the critic network using
+            fitter Q-learning.
+
+The interface for this models can be found in the [model.py][url_impl_models_interface] 
+file, and it defines abstract classes with the required methods to be implemented by the 
+backend-specific implementations. There are three abstract classes declared in this
+file, and these are:
+
+* [**DDPGModelBackbone**][url_models_core_backbone]: interface for all backbone models to be used, which must define
+                                                     the bulk of the network to be used for the models. Below there's
+                                                     a snippet of the implementation.
+
+```python
+class DDPGModelBackbone( abc.ABC ) :
+    r"""DDPG backbone architecture for all models (either actor|critic)
+
+    Args:
+        backboneConfig (config.DDPGModelBackboneConfig) : configuration of the backbone to be used
+
+    """
+    def __init__( self, backboneConfig, **kwargs ) :
+        super( DDPGModelBackbone, self ).__init__()
+
+        self._config = backboneConfig
 
 
-### 2.3 Trainer
+    @abc.abstractmethod
+    def forward( self, inputs ) :
+        r"""Executes a forward pass over the backbone at a given state (or state-batch)
+
+        Args:
+            inputs (list): a list of np.ndarrays, which represents the inputs to the model
+
+        """
+        pass
 
 
-### 2.4 Hyperparameters
+    @abc.abstractmethod
+    def copy( self, other, tau = 1.0 ) :
+        r"""Copies softly (with polyak averaging) model weights from another model
+
+        Args:
+            other (DDPGModelBackbone)   : model from whom to copy the weights
+            tau (float)                 : averaging factory (soft-update with polyak averaging)
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def clone( self ) :
+        r"""Creates an exact deep-replica of this model
+
+        Returns:
+            (DDPGModelBackbone) : replica of this model
+
+        """
+        pass
+
+
+    @property
+    def config( self ) :
+        r"""Returns the configuration properties of the backbone
+
+        """
+        return self._config
+```
+
+* [**IDDPGActor**][url_models_core_actor_head]: interface for the *actor-head*, which must define additional operations
+                                                needed to train the actor-network. Below there's a snippet of this interface.
+                                                Notice that this component is wrapping a given backbone for an actor-network.
+
+```python
+class IDDPGActor( abc.ABC ) :
+    r"""DDPG core actor-model class
+
+    Abstract class that represents an actor for a DDPG-based agent, 
+    composed of operations on top of a backbone architecture defined
+    by the user as he requests (either defining a custom model or
+    through layer definitions)
+
+    Args:
+        backbone (DDPGModelBackbone)    : model backbone architecture
+        learningRate (float)            : learning rate used for the optimizer
+
+    """
+    def __init__( self, backbone, learningRate, **kwargs ) :
+        super( IDDPGActor, self ).__init__()
+
+        self._backbone = backbone
+        self._learningRate = learningRate
+        self._isTargetNetwork = False
+        self._savedir = './results/session_default'
+
+
+    def setAsTargetNetwork( self, isTarget ) :
+        r"""Sets the target-mode of the network
+
+        It hints the network to whether or not the network is a target network,
+        which changes the behaviour a bit of this network in evaluation mode,
+        namely removing the constraint of deactivating the batch-norm when 
+        calling eval on a batch of states
+
+        Args:
+            isTarget (boolean) : target-mode to be used by this network 
+
+        """
+        self._isTargetNetwork = isTarget
+
+
+    @abc.abstractmethod
+    def eval( self, state ) :
+        r"""Returns the action to take at a given state (batch of states)
+
+        Args:
+            state (np.ndarray) : state (batch of states) at which we want to act
+
+        Returns:
+            (np.ndarray) : action(s) to take at the given state(s)
+
+        """
+        pass
+
+    @abc.abstractmethod
+    def train( self, states, critic ) :
+        r"""Takes a learning step to update the parameters of the actor
+
+        This method must implement the update of the parameters of the actor
+        by using the deterministic policy gradients theorem, which computes
+        the gradients through the critic
+
+        Args:
+            states (np.ndarray)     : batch of states sampled from the replay buffer
+            critic (IDDPGCritic)    : appropriate critic to be used to compute gradients from
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def copy( self, other, tau = 1.0 ) :
+        r"""Updates the parameters of the actor from another one using polyak averaging
+
+        Args:
+            other (IDDPGActor)  : actor from whom we want to copy the parameters
+            tau (float)         : polyak averaging factor for soft-updates
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def clone( self ) :
+        r"""Creates a replica of this actor (usually for a target actor)
+
+        Returns:
+            (IDDPGActor) : a replica of this actor
+
+        """
+        pass
+
+
+    def setSaveDir( self, savedir ) :
+        r"""Sets the directory where to save actor model
+
+        Args:
+            savedir (string) : folder where to save the actor model
+
+        """
+        self._savedir = savedir
+
+
+    @abc.abstractmethod
+    def save( self ) :
+        r"""Saves the actor model into disk
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def load( self ) :
+        r"""Loads the actor model from disk
+
+        """
+        pass
+
+
+    @property
+    def backbone( self ) :
+        r"""Returns a reference to the backbone model
+
+        """
+        return self._backbone
+```
+
+* [**IDDPGCritic**][url_models_core_critic_head]: interface for the *critic-head*, which must define additional operations
+                                                  needed to train the critic-network. Below there's a snippet of this interface.
+                                                  Notice that this component is wrapping a given backbone for an critic-network.
+
+```python
+class IDDPGCritic( abc.ABC ) :
+    r"""DDPG core critic-model class
+
+    Abstract class that represents a critic for a DDPG-based agent, 
+    composed of operations on top of a backbone architecture defined
+    by the user as he requests (either defining a custom model or
+    through layer definitions)
+
+    Args:
+        backbone (DDPGModelBackbone)    : model backbone architecture
+        learningRate (float)            : learning rate used for the optimizer
+
+    Args:
+
+    """
+    def __init__( self, backbone, learningRate, **kwargs ) :
+        super( IDDPGCritic, self ).__init__()
+
+        self._backbone = backbone
+        self._learningRate = learningRate
+        self._isTargetNetwork = False
+        self._savedir = './results/session_default'
+
+
+    def setAsTargetNetwork( self, isTarget ) :
+        r"""Sets the target-mode of the network
+
+        It hints the network to whether or not the network is a target network,
+        which changes the behaviour a bit of this network in evaluation mode,
+        namely removing the constraint of deactivating the batch-norm when 
+        calling eval on a batch of states
+
+        Args:
+            isTarget (boolean) : target-mode to be used by this network 
+
+        """
+        self._isTargetNetwork = isTarget
+
+
+    @abc.abstractmethod
+    def eval( self, state, action ) :
+        r"""Returns the q-values Q(s,a) at the given state(s) and action(s)
+
+        Args:
+            state (np.ndarray)  : state (batch of states) at which we want to evaluate Q(s,a)
+            action (np.ndarray) : action (batch of actions) at which we want to evaluate Q(s,a)
+
+        Returns:
+            (np.ndarray) : q-value (batch of Q(s,a))
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def train( self, states, actions, qtargets ) :
+        r"""Takes a learning step to update the parameters of the critic
+
+        This method must implement the update of the parameters of the critic
+        by using fitted Q-learning, using the given Q-targets as the true values
+        of Q(s,a) at those states and actions given
+
+        Args:
+            states (np.ndarray)     : batch of states to compute Q(s,a)
+            actions (np.ndarray)    : batch of actions to compute Q(s,a)
+            qtargets (np.ndarray)   : batch of qtargets Qhat(s,a) = r + gamma * Q(s,u(s))
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def copy( self, other, tau = 1.0 ) :
+        r"""Updates the parameters of the critic from another one using polyak averaging
+
+        Args:
+            other (IDDPGCritic) : critic from whom we want to copy the parameters
+            tau (float)         : polyak averaging factor for soft-updates
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def clone( self ) :
+        r"""Creates a replica of this actor (usually for a target actor)
+
+        Returns:
+            (IDDPGActor) : a replica of this actor
+
+        """
+        pass
+
+
+    def setSaveDir( self, savedir ) :
+        r"""Sets the directory where to save critic model
+
+        Args:
+            savedir (string) : folder where to save the critic model
+
+        """
+        self._savedir = savedir
+
+
+    @abc.abstractmethod
+    def save( self ) :
+        r"""Saves the critic model into disk
+
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def load( self ) :
+        r"""Loads the critic model from disk
+
+        """
+        pass
+
+
+    @property
+    def backbone( self ) :
+        return self._backbone
+```
+
+Regarding the backend-specific implementations, we currently have support for **pytorch**
+backbones and heads, and we'll add support for **tensorflow** in later updates. This
+implementation is located in the [pytorch.py][url_impl_models_pytorch] file, which currently
+implements **custom/specific MLP backbones** for our actor and critic (same architecture as
+explained in the previous section on architectures used), and **generic heads** for the
+actor and critic. The idea was to allow the user to pass a definition of the architecture
+as a dictionary of layers, and then instantiate these using a generic backbone, kind of like
+keras (this feature will be implemented in later updates as well). The features implemented 
+for this project submission are explained below:
+
+* [**Base Pytorch backbones**][url_pytorch_base_backbone]: We first implement a base backbone for the pytorch backend, that contains
+                                                           some functionality that will be required by all backbones to be implemented,
+                                                           like copies using soft-updates, etc.. Notice that we also define a custom 
+                                                           weight initializer, which is similar to the *Lecun Uniform initializer*. This
+                                                           comes from our first code reference from the Udacity Pendulum DDPG implementation,
+                                                           which also worked fine for our experiments.
+
+```python
+def lecunishUniformInitializer( layer ) :
+    _fanIn = layer.weight.data.size()[0]
+    _limit = np.sqrt( 2. / _fanIn )
+    
+    return ( -_limit, _limit )
+
+
+class DDPGModelBackbonePytorch( model.DDPGModelBackbone, nn.Module ) :
+
+
+    def __init__( self, backboneConfig, **kwargs ) :
+        super( DDPGModelBackbonePytorch, self ).__init__( backboneConfig, **kwargs )
+
+        self._seed = torch.manual_seed( self._config.seed )
+        self._device = kwargs['device'] if 'device' in kwargs else DEFAULT_DEVICE
+
+    @abc.abstractmethod
+    def _resetParameters( self ) :
+        r"""Resets the parameters of the network by using the appropriate initializers
+
+        """
+        pass
+
+
+    def copy( self, other, tau = 1.0 ) :
+        r"""Copies softly (with polyak averaging) model weights from another model
+
+        Args:
+            other (DDPGModelBackbone)   : model from whom to copy the weights
+            tau (float)                 : averaging factory (soft-update with polyak averaging)
+
+        """
+        for paramsSelf, paramsOther in zip( self.parameters(), other.parameters() ) :
+            paramsSelf.data.copy_( ( 1. - tau ) * paramsSelf.data + tau * paramsOther.data )
+
+
+    def clone( self ) :
+        r"""Creates an exact deep-replica of this model
+
+        Returns:
+            (DDPGModelBackbone) : replica of this model
+
+        """
+        _replica = self.__class__( self._config, device = self._device )
+        _replica.to( self._device )
+        _replica.copy( self )
+
+        return _replica
+```
+
+* [**MLP Actor-Backbone**][url_pytorch_actor_backbone]: We implemented a custom backbone for the actor-network,
+                                                        using the architecture explained earlier. It consists of
+                                                        a MLP with batchnorm (if requested) and ReLU activations.
+
+
+
+```python
+class DDPGMlpModelBackboneActor( DDPGModelBackbonePytorch ) :
+
+    def __init__( self, backboneConfig, **kwargs ) :
+        super( DDPGMlpModelBackboneActor, self ).__init__( backboneConfig, **kwargs )
+
+        self._fc1 = nn.Linear( self._config.inputShape[0], 256 )
+        self._fc2 = nn.Linear( 256, 128 )
+        self._fc3 = nn.Linear( 128, self._config.outputShape[0] )
+
+        if self._config.useBatchnorm :
+            self._bn0 = nn.BatchNorm1d( self._config.inputShape[0] )
+            self._bn1 = nn.BatchNorm1d( 256 )
+            self._bn2 = nn.BatchNorm1d( 128 )
+
+        # initialize the parameters of the backbone
+        self._resetParameters()
+
+
+    def _resetParameters( self ) :
+        self._fc1.weight.data.uniform_( *lecunishUniformInitializer( self._fc1 ) )
+        self._fc2.weight.data.uniform_( *lecunishUniformInitializer( self._fc2 ) )
+        self._fc3.weight.data.uniform_( -3e-3, 3e-3 )
+
+
+    def forward( self, inputs ) :
+        # sanity check: actor network is deterministic, and receives only states as input
+        assert len( inputs ) == 1, 'ERROR> this network expects only one input (states)'
+
+        # grab the actual input to the model (states)
+        _states = inputs[0]
+
+        if self._config.useBatchnorm :
+            x = self._bn0( _states )
+            x = F.relu( self._bn1( self._fc1( x ) ) )
+            x = F.relu( self._bn2( self._fc2( x ) ) )
+            x = F.tanh( self._fc3( x ) )
+        else :
+            x = F.relu( self._fc1( _states ) )
+            x = F.relu( self._fc2( x ) )
+            x = F.tanh( self._fc3( x ) )
+
+        return x
+```
+
+* [**MLP Critic-Backbone**][url_pytorch_critic_backbone]: We also implemented a custom backbone for the critic-network,
+                                                          using the architecture explained earlier. It consists of
+                                                          a MLP with batchnorm (if requested) and ReLU activations. Notice
+                                                          it concatenates the actions taken by the agent, to the hidden 
+                                                          states after the first Fully Connected layer. This effectively
+                                                          allows to compute Q<sub>&phi;</sub>(s,a).
+
+```python
+class DDPGMlpModelBackboneCritic( DDPGModelBackbonePytorch ) :
+
+    def __init__( self, backboneConfig, **kwargs ) :
+        super( DDPGMlpModelBackboneCritic, self ).__init__( backboneConfig, **kwargs )
+
+        # sanity check: ensure sizes are exactly what we expect for this case
+        assert self._config.outputShape[0] == 1, \
+            'ERROR> Critic model should only output 1 value for Q(s,a)'
+
+        self._fc1 = nn.Linear( self._config.inputShape[0], 128 )
+        self._fc2 = nn.Linear( 128 + self._config.actionsShape[0], 128 )
+        self._fc3 = nn.Linear( 128, self._config.outputShape[0] )
+
+        if self._config.useBatchnorm :
+            self._bn0 = nn.BatchNorm1d( self._config.inputShape[0] )
+
+        # initialize the parameters of the backbone
+        self._resetParameters()
+
+
+    def _resetParameters( self ) :
+        self._fc1.weight.data.uniform_( *lecunishUniformInitializer( self._fc1 ) )
+        self._fc2.weight.data.uniform_( *lecunishUniformInitializer( self._fc2 ) )
+        self._fc3.weight.data.uniform_( -3e-3, 3e-3 )
+
+
+    def forward( self, inputs ) :
+        # sanity check: critic network expects both state and action batches as inputs
+        assert len( inputs ) == 2, 'ERROR> this network expects two inputs (states,actions)'
+
+        # grab the actual inputs to the model (states and actions)
+        _states = inputs[0]
+        _actions = inputs[1]
+
+        if self._config.useBatchnorm :
+            x = self._bn0( _states )
+            x = F.relu( self._fc1( x ) )
+            x = torch.cat( [x, _actions], dim = 1 )
+            x = F.relu( self._fc2( x ) )
+            x = self._fc3( x )
+        else :
+            x = F.relu( self._fc1( _states ) )
+            x = torch.cat( [x, _actions], dim = 1 )
+            x = F.relu( self._fc2( x ) )
+            x = self._fc3( x )
+
+        return x
+```
+
+* [**Actor-head**][url_pytorch_actor_head]: The actor-head is implemented in the **DDPGActor** class, which
+                                            contains the required backend-specific operations to train the
+                                            wrapped backbone for the actor-network using the Deterministic
+                                            Policy Gradient update (see the [train](https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L202) 
+                                            method).
+
+```python
+class DDPGActor( model.IDDPGActor ) :
+
+    def __init__( self, backbone, learningRate, **kwargs ) :
+        super( DDPGActor, self ).__init__( backbone, learningRate, **kwargs )
+
+        self._device = kwargs['device'] if 'device' in kwargs else DEFAULT_DEVICE
+        # send the backbone model to the appropriate device
+        self._backbone.to( self._device )
+
+        self._optimizer = opt.Adam( self._backbone.parameters(), self._learningRate )
+
+
+    def eval( self, state ) :
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            state = torch.from_numpy( state ).float().to( self._device )
+    
+            if not self._isTargetNetwork :
+                # set in evaluation mode, as we might be using batch-norm
+                self._backbone.eval()
+    
+            # do not compute gradients for the actor just yet
+            with torch.no_grad() :
+                _action = self._backbone( [state] )
+    
+            if not self._isTargetNetwork :
+                # get back to training mode, as we might be using batch-norm
+                self._backbone.train()
+    
+            return _action.cpu().data.numpy()
+
+
+    def train( self, states, critic ) :
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            states = torch.from_numpy( states ).float().to( self._device )
+    
+            self._optimizer.zero_grad()
+            # compute actions taken in these states by the actor
+            _actionsPred = self._backbone( [states] )
+            # compose the critic over the actor outputs (sandwich), which effectively does g(f(x))
+            _lossActor = -critic( states, _actionsPred ).mean()
+            _lossActor.backward()
+            # take a step with the optimizer
+            self._optimizer.step()
+
+
+    def copy( self, other, tau = 1.0 ) :
+        self._backbone.copy( other.backbone, tau )
+
+
+    def clone( self ) :
+        _replica = self.__class__( self._backbone.clone(),
+                                   self._learningRate,
+                                   device = self._device )
+
+        return _replica
+
+
+    def save( self ) :
+        torch.save( self._backbone.state_dict(), os.path.join( self._savedir, 'checkpoint_actor.pth' ) )
+
+
+    def load( self ) :
+        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_actor.pth' ) ) )
+
+
+    def __call__( self, states ) :
+        return self._backbone( [states] )
+```
+
+* [**Critic-head**][url_pytorch_critic_head]: The critic-head is implemented in the **DDPGCritic** class, which
+                                              contains the required backend-specific operations to train the
+                                              wrapped backbone for the critic-network using fitted Q-learning as
+                                              in DQN (see the [train](https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L279) 
+                                              method).
+
+```python
+class DDPGCritic( model.IDDPGCritic ) :
+
+    def __init__( self, backbone, learningRate, **kwargs ) :
+        super( DDPGCritic, self ).__init__( backbone, learningRate, **kwargs )
+
+        self._device = kwargs['device'] if 'device' in kwargs else DEFAULT_DEVICE
+        # send the backbone model to the appropriate device
+        self._backbone.to( self._device )
+
+        self._optimizer = opt.Adam( self._backbone.parameters(), self._learningRate )
+
+
+    def eval( self, state, action ) :
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            state = torch.from_numpy( state ).float().to( self._device )
+            action = torch.from_numpy( action ).float().to( self._device )
+    
+            if not self._isTargetNetwork :
+                # set in evaluation mode, as we might be using batch-norm
+                self._backbone.eval()
+    
+            # do not compute gradients for the critic in this stage
+            with torch.no_grad() :
+                _qvalue = self._backbone( [state, action] )
+    
+            if not self._isTargetNetwork :
+                # get back to training mode, as we might be using batch-norm
+                self._backbone.train()
+    
+            return _qvalue.cpu().data.numpy()
+
+
+    def train( self, states, actions, qtargets ) :
+        with autograd.detect_anomaly() :
+            # transform to torch tensors
+            states = torch.from_numpy( states ).float().to( self._device )
+            actions = torch.from_numpy( actions ).float().to( self._device )
+            qtargets = torch.from_numpy( qtargets ).float().to( self._device )
+    
+            # compute q-values for Q(s,a), where s,a come from the given ...
+            # states and actions batches passed along the q-targets
+            _qvalues = self._backbone( [states, actions] )
+    
+            # compute loss for the critic
+            self._optimizer.zero_grad()
+            _lossCritic = F.mse_loss( _qvalues, qtargets )
+            _lossCritic.backward()
+            if self._backbone.config.clipGradients :
+                nn.utils.clip_grad_norm( self._backbone.parameters(), 
+                                         self._backbone.config.gradientsClipNorm )
+            # take a step with the optimizer
+            self._optimizer.step()
+
+
+    def copy( self, other, tau = 1.0 ) :
+        self._backbone.copy( other.backbone, tau )
+
+
+    def clone( self ) :
+        _replica = self.__class__( self._backbone.clone(),
+                                   self._learningRate,
+                                   device = self._device )
+
+        return _replica
+
+
+    def save( self ) :
+        torch.save( self._backbone.state_dict(), os.path.join( self._savedir, 'checkpoint_critic.pth' ) )
+
+
+    def load( self ) :
+        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_critic.pth' ) ) )
+
+
+    def __call__( self, states, actions ) :
+        return self._backbone( [states, actions] )
+```
+
+Finally, we have added also a small example of how to instantiate these backbones and heads. Recall
+that we mentioned we were using the **gin-config** framework to easily use configuration structures
+and pass them during construction of our required objects. Below we show a snippet of how to instantiate
+such models, which is located in the same [pytorch.py][url_impl_models_pytorch] file as an example:
+
+```python
+if __name__ == '__main__' :
+    import gin
+    gin.parse_config_file( '../../../configs/ddpg_reacher_multi_default.gin' )
+
+    from ccontrol.ddpg.utils.config import DDPGModelBackboneConfig
+    with gin.config_scope( 'actor' ) :
+        _actorNetBackboneConfig = DDPGModelBackboneConfig()
+    with gin.config_scope( 'critic' ) :
+        _criticNetBackboneConfig = DDPGModelBackboneConfig()
+
+    print( '-------------------------- ACTOR --------------------------------' )
+    _actorNetBackbone = DDPGMlpModelBackboneActor( _actorNetBackboneConfig )
+    print( _actorNetBackbone )
+
+    print( '-------------------------- CRITIC -------------------------------' )
+    _criticNetBackbone = DDPGMlpModelBackboneCritic( _criticNetBackboneConfig )
+    print( _criticNetBackbone )
+```
+
+### 2.3 **Trainer**
+
+The trainer is a simple trainer similar to the one from the previous DQN project. It is in 
+charge of instantiating all required objects (like agents, models, configuration structures, etc.)
+and composes them into a training loop (or test loop if case of evaluation). 
+
+
+### 2.4 **Hyperparameters**
 
 
 ## 3. Results
