@@ -30,6 +30,7 @@
 [url_readme]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/README.md
 [url_torchsummary]: https://github.com/sksq96/pytorch-summary
 [url_stable_baselines]: https://github.com/hill-a/stable-baselines
+[url_dopamine]: https://github.com/google/dopamine
 
 [url_impl_agent]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/core/agent.py
 [url_impl_models_interface]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/core/model.py
@@ -52,9 +53,15 @@
 [url_pytorch_base_backbone]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L29
 [url_pytorch_actor_backbone]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L72
 [url_pytorch_critic_backbone]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L116
-
 [url_pytorch_actor_head]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L170
 [url_pytorch_critic_head]: https://github.com/wpumacay/DeeprlND-projects/blob/fda2c59f348a0712efe9dc8234830f879a2ef6d8/project2-continuous-control/ccontrol/ddpg/models/pytorch.py#L246
+
+[url_config_default_gin_file]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/configs/ddpg_reacher_multi_default.gin
+[url_config_mechanism]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/utils/config.py
+
+[url_utils_replay_buffer]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/utils/replaybuffer.py
+[url_utils_noise]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/ddpg/utils/noise.py
+[url_utils_env_wrapper]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/ccontrol/envs/mlagents.py
 
 # Using DDPG to solve the Reacher environment from ML-Agents
 
@@ -362,6 +369,8 @@ of the following components:
 * **Model** : Abstract classes (interfaces) from which backend-specific models will inherit.
 * **Config** : Configuration structures linked with the [gin-config][url_gin_config] package 
                to easily use, tweak and share hyperparameters.
+* **Utils**: Some helper functions and classes used throughout the implementation, like replay
+             buffers, and env. wrappers.
 * **Trainer** : Script in charge of loading configuration structures, instantiating both
                 environment and agent, implementing the training loop, and using the required
                 logging functionality to save training results.
@@ -517,8 +526,8 @@ class DDPGAgent( object ) :
             ## self._actionScaler = min( 1.0, self._actionScaler * self._config.epsilonFactorGeom )
 ```
 
-* The [**learn**][url_agent_method_learn] is in charge of implementing the following high-level 
-  parts of the learning step of the DDPG algorithm:
+* Finally, the [**learn**][url_agent_method_learn] is in charge of implementing the following 
+  high-level parts of the learning step of the DDPG algorithm:
 
     * Grabbing a minibatch of experience from the replay buffer.
     * Delegating learning updates of the critic network to its appropriate backend implementation.
@@ -1313,7 +1322,246 @@ if __name__ == '__main__' :
     print( _criticNetBackbone )
 ```
 
-### 2.3 **Trainer**
+### 2.3 **Config**
+
+A major change from the previous project was to use a different configuration mechanism. 
+We decided to follow the same approach used in the [dopamine][url_dopamine] an configure 
+our models and agents using the [gin-config][url_gin_config] framework. In this way we can 
+save the hyperparameters for our agents in .gin files and used them as we need them in our 
+trainer by parsing the appropriate configuration file.
+
+To make use of gin, we defined some configuration structures that will hold the configuration
+parameters and hyperparameters of our models and agents. These structures can be found in the
+[config.py][url_config_mechanism] file, and consist of the following:
+
+* **Trainer-config**: the structure holding parameters to configure the trainer, like how many episodes
+                      to use, max. length of an episode, id of the training run (to create appropriate
+                      folders for the results), etc.. Below there is a snippet containing this structure.
+                      Notice how we just had to label the structure as gin-configurable to be able to
+                      pass the configuration parameters from gin-config files.
+
+```python
+@gin.configurable
+class DDPGTrainerConfig( object ) :
+    r"""Configuration options for the DDPG trainer
+
+    Args:
+        numTrainingEpisodes (int)   : number of episodes used for training
+        maxStepsInEpisode (int)     : maximum number of steps per episode
+        logWindowSize (int)         : size of the logging averaging window (in episodes)
+        seed (int)                  : seed for the random-number generators
+        sessionID (str)             : name of the session used for training, used as 
+                                      savedir or loaddir during training or testing respectively
+
+    """
+    def __init__( self,
+                  numTrainingEpisodes = 2000,
+                  maxStepsInEpisode = 3000,
+                  logWindowSize = 100,
+                  seed = 0,
+                  sessionID = 'session_default' ) :
+        super( DDPGTrainerConfig, self ).__init__()
+
+        self.numTrainingEpisodes    = numTrainingEpisodes
+        self.maxStepsInEpisode      = maxStepsInEpisode
+        self.logWindowSize          = logWindowSize
+        self.seed                   = seed
+        self.sessionID              = sessionID
+```
+
+* **Agent-config**: the structure holding configuration parameters for the agent, like the size
+                    of the replay buffer, type of noise to use, size of the minibatch used for
+                    learning, etc.. Below there's a snippet showing all possible configuration
+                    parameters.
+
+```python
+@gin.configurable
+class DDPGAgentConfig( object ) :
+    r"""Configuration options for DDPG based agents
+
+    Args:
+        observationsShape (tuple)   : shape of the observations provided to the agent
+        actionsShape (tuple)        : shape of the actions that the agent can take
+        seed (int)                  : random seed use to initialize the random number generators
+        gamma (float)               : discount factor
+        tau (float)                 : polyak averaging factor used for soft-updates
+        replayBufferSize (int)      : size of the replay buffer
+        lrActor (float)             : learning rate to be used for the actor
+        lrCritic (float)            : learning rate to be used for the critic
+        batchSize (int)             : size of the batch taken from the replay buffer at each learning step
+        trainFrequencySteps (int)   : frequency (in steps) at which to take learning steps
+        trainNumLearningSteps (int) : number of learning steps to take when learning is required
+        noiseType (str)             : type of noise to be used, either (ounoise|normal)
+        noiseOUMu (float)           : mu factor for the Ornstein-Uhlenbeck noise process
+        noiseOUTheta (float)        : theta factor for the Ornstein-Uhlenbeck noise process
+        noiseOUSigma (float)        : sigma factor for the Ornstein-Uhlenbeck noise process
+        noiseNormalStddev (float)   : standard deviation of the zero-mean gaussian noise
+        epsilonSchedule (str)       : type of schedule to be used to decay epsilon (noise), either 'linear' or 'geometric'
+        epsilonFactorGeom (float)   : decay factor (multiplicative) used for the geometric schedule
+        epsilonFactorLinear (float) : decay factor (decrement) used for the linear schedule
+        trainingStartingStep (int)  : step number at which training actually starts
+
+    """
+    def __init__( self,
+                  observationsShape = (2,),
+                  actionsShape = (2,),
+                  seed = 0,
+                  gamma = 0.99,
+                  tau = 0.001,
+                  replayBufferSize = 1000000,
+                  lrActor = 0.001,
+                  lrCritic = 0.001,
+                  batchSize = 256,
+                  trainFrequencySteps = 20,
+                  trainNumLearningSteps = 10,
+                  noiseType = 'ounoise',
+                  noiseOUMu = 0.0,
+                  noiseOUTheta = 0.15,
+                  noiseOUSigma = 0.2,
+                  noiseNormalStddev = 0.25,
+                  epsilonSchedule = 'linear',
+                  epsilonFactorGeom = 0.999,
+                  epsilonFactorLinear = 1e-5,
+                  trainingStartingStep = 0 ) :
+        super( DDPGAgentConfig, self ).__init__()
+
+        self.observationsShape = observationsShape
+        self.actionsShape = actionsShape
+        self.seed = 0
+        self.gamma = gamma
+        self.tau = tau
+        self.replayBufferSize = replayBufferSize
+        self.lrActor = lrActor
+        self.lrCritic = lrCritic
+        self.batchSize = batchSize
+        self.trainFrequencySteps = trainFrequencySteps
+        self.trainNumLearningSteps = trainNumLearningSteps
+        self.noiseType = noiseType
+        self.noiseOUMu = noiseOUMu
+        self.noiseOUTheta = noiseOUTheta
+        self.noiseOUSigma = noiseOUSigma
+        self.noiseNormalStddev = noiseNormalStddev
+        self.epsilonSchedule = epsilonSchedule
+        self.epsilonFactorGeom = epsilonFactorGeom
+        self.epsilonFactorLinear = epsilonFactorLinear
+        self.trainingStartingStep = trainingStartingStep
+```
+
+* **Backbone-config**: the structure holding configuration parameters for the backbones
+                       of the models used by the actors and critics. It primarily contains
+                       some information from the architecture of the model, and in future
+                       updates will contain the full description of the architecture through
+                       the *layersDefs* attribute. As this same class (not same object) is 
+                       used for both actor and critics, we have to take this into account in
+                       the gin-config file, as by default it only allows to configure a single
+                       class, unlike our case that we need two flavors of the same class (one
+                       for the actor and one for the critic). As we will see later, this can
+                       be easily fixed using a feature of gin-config called *scopes*. Below
+                       we show a snippet showing all possible configuration parameters for
+                       this structure.
+
+```python
+@gin.configurable
+class DDPGModelBackboneConfig( object ) :
+    r"""Configuration options of the backbone of models used with DDPG based agents
+
+    Args:
+        observationsShape (tuple)   : shape of the observation space
+        actionsShape (tuple)        : shape of the action space
+        inputShape (tuple)          : shape of the input to the model
+        outputShape (tuple)         : shape of the output of the model
+        layersDefs (list)           : a list of dictionaries each describing a layer of the model
+        useBatchnorm (boolean)      : whether or not to use batchnorm in the backbone of the model
+        clipGradients (boolean)     : whether or not to clip the norm of the gradients in the layers
+        gradientsClipNorm (float)   : norm to which to clip the gradients (if applicable)
+        seed (int)                  : seed for random number generators to use
+
+    """
+    def __init__( self,
+                  observationsShape = (2,),
+                  actionsShape = (2,),
+                  inputShape = (2,),
+                  outputShape = (2,),
+                  layersDefs = [],
+                  useBatchnorm = True,
+                  clipGradients = False,
+                  gradientsClipNorm = 1.,
+                  seed = 0 ) :
+        super( DDPGModelBackboneConfig, self ).__init__()
+
+        self.observationsShape = copy.copy( observationsShape )
+        self.actionsShape = copy.copy( actionsShape )
+        self.inputShape = copy.copy( inputShape )
+        self.outputShape = copy.copy( outputShape )
+        self.layersDefs = copy.copy( layersDefs )
+        self.useBatchnorm = useBatchnorm
+        self.clipGradients = clipGradients
+        self.gradientsClipNorm = gradientsClipNorm
+        self.seed = seed
+```
+
+An example of the usage was shown in the previous section, when we described how to instantiate
+a model using our implementation. There we used as configuration file a default config file called
+[ddpg_reacher_multi_default.gin][url_config_default_gin_file], whose contents are shown below.
+Notice how we make use of scopes for the actor and critic by using the **actor/** and **critic/**
+scopes to configure the appropriate structures.
+
+```python
+
+import ccontrol.ddpg.utils.config
+
+SEED = 0
+
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.numTrainingEpisodes    = 2000
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.maxStepsInEpisode      = 3000
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.logWindowSize          = 100
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.seed                   = %SEED
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.sessionID              = 'session_default'
+
+ccontrol.ddpg.utils.config.DDPGAgentConfig.observationsShape        = (33,)
+ccontrol.ddpg.utils.config.DDPGAgentConfig.actionsShape             = (4,)
+ccontrol.ddpg.utils.config.DDPGAgentConfig.seed                     = %SEED
+ccontrol.ddpg.utils.config.DDPGAgentConfig.gamma                    = 0.99
+ccontrol.ddpg.utils.config.DDPGAgentConfig.tau                      = 0.001
+ccontrol.ddpg.utils.config.DDPGAgentConfig.replayBufferSize         = 1000000
+ccontrol.ddpg.utils.config.DDPGAgentConfig.lrActor                  = 0.001
+ccontrol.ddpg.utils.config.DDPGAgentConfig.lrCritic                 = 0.001
+ccontrol.ddpg.utils.config.DDPGAgentConfig.batchSize                = 256
+ccontrol.ddpg.utils.config.DDPGAgentConfig.trainFrequencySteps      = 20
+ccontrol.ddpg.utils.config.DDPGAgentConfig.trainNumLearningSteps    = 10
+ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseType                = 'ounoise'
+ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseOUMu                = 0.0
+ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseOUTheta             = 0.15
+ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseOUSigma             = 0.2
+ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseNormalStddev        = 0.25
+ccontrol.ddpg.utils.config.DDPGAgentConfig.epsilonSchedule          = 'linear'
+ccontrol.ddpg.utils.config.DDPGAgentConfig.epsilonFactorGeom        = 0.999
+ccontrol.ddpg.utils.config.DDPGAgentConfig.epsilonFactorLinear      = 1e-5
+ccontrol.ddpg.utils.config.DDPGAgentConfig.trainingStartingStep     = 0
+
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.observationsShape = (33,)
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.actionsShape = (4,)
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.inputShape = (33,)
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.outputShape = (4,)
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.layersDefs = []
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.useBatchnorm = True
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.clipGradients = False
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.gradientsClipNorm = 1.
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.seed = %SEED
+
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.observationsShape = (33,)
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.actionsShape = (4,)
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.inputShape = (33,)
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.outputShape = (1,)
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.layersDefs = []
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.useBatchnorm = True
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.clipGradients = True
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.gradientsClipNorm = 1.
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.seed = %SEED
+```
+
+
+### 2.4 **Trainer**
 
 The trainer is a simple trainer similar to the one from the previous DQN project. It is in 
 charge of instantiating all required objects (like agents, models, configuration structures, etc.)
