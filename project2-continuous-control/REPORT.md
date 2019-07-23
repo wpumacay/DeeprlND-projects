@@ -1,15 +1,7 @@
 [//]: # (References)
 
 <!-- IMAGES -->
-[img_results_experiment_1_all_runs]: https://wpumacay.github.io/research_blog/imgs/img_results_experiment_1_all_runs.png
-[img_results_experiment_1_all_runs_std]: https://wpumacay.github.io/research_blog/imgs/img_results_experiment_1_all_runs_std.png
-[img_results_experiment_2_all_runs_std]: https://wpumacay.github.io/research_blog/imgs/img_results_experiment_2_all_runs_std.png
-[img_results_experiment_3_all_runs_std]: https://wpumacay.github.io/research_blog/imgs/img_results_experiment_3_all_runs_std.png
-[img_results_submission_single_pytorch]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_single_pytorch.png
-[img_results_submission_single_tensorflow]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_single_tensorflow.png
-[img_results_submission_all_runs]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs.png
-[img_reulsts_submission_all_runs_pytorch_std]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_pytorch_std.png
-[img_results_submission_all_runs_tensorflow_std]: https://wpumacay.github.io/research_blog/imgs/img_results_submission_all_runs_tensorflow_std.png
+[gif_project_2_reacher_multi_agent]: imgs/gif_project_2_reacher_multi_agent.gif
 
 [img_rl_pg_objective]: imgs/img_rl_pg_objective.png
 [img_rl_pg_gradient_ascent]: imgs/img_rl_pg_gradient_ascent.png
@@ -23,8 +15,12 @@
 [img_rl_ddpg_polyak_averaging]: imgs/img_rl_ddpg_polyak_averaging.png
 [img_rl_q_learning_ccontrol]: imgs/img_rl_q_learning_ccontrol.png
 [img_rl_ddpg_learning_maximizer]: imgs/img_rl_ddpg_learning_maximizer.png
+
 [img_ddpg_network_architecture_actor]: imgs/img_ddpg_network_architecture_actor.png
 [img_ddpg_network_architecture_critic]: imgs/img_ddpg_network_architecture_critic.png
+
+[img_results_bad_hyperparameters]: imgs/img_results_bad_hyperparameters.png
+[img_results_passing_submission]: imgs/img_results_passing_submission.png
 
 <!-- URLS -->
 [url_readme]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/README.md
@@ -66,6 +62,8 @@
 [url_trainer_method_main]: https://github.com/wpumacay/DeeprlND-projects/blob/cbbab21d795b8c0b1d38cacc5f07662efae6352b/project2-continuous-control/trainer.py#L151
 [url_trainer_method_train]: https://github.com/wpumacay/DeeprlND-projects/blob/cbbab21d795b8c0b1d38cacc5f07662efae6352b/project2-continuous-control/trainer.py#L38
 
+[url_gin_submission]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/configs/ddpg_reacher_multi_submission.gin
+
 # Using DDPG to solve the Reacher environment from ML-Agents
 
 This is an accompanying report for the project-2 submission. Below we list some key details we
@@ -78,9 +76,9 @@ will cover in our submission:
 * [Implementation](#2-implementation)
     * [Agent implementation](#21-agent)
     * [Model implementation](#22-model)
-    * [Utilities implementation](#23-utilities)
-    * [Trainer implementation](#24-trainer)
-    * [Choice of hyperparameters](#25-hyperparameters)
+    * [Config implementation](#23-config)
+    * [Utilities implementation](#24-utils)
+    * [Trainer implementation](#25-trainer)
 
 * [Results](#3-results)
     * [Running a pretrained agent](#30-running-a-pretrained-agent)
@@ -1589,7 +1587,7 @@ main utilities we used are listed below:
                         a **gym-like interface**, which allowed us to check that the implementation
                         worked in both simple gym environments and in our unity environment.
 
-### 2.4 **Trainer**
+### 2.5 **Trainer**
 
 **Implementation: [trainer.py][url_impl_trainer]**
 
@@ -1762,28 +1760,124 @@ def train( env, agent, numEpisodes ) :
 
 ## 3. Results
 
-
+In this section we give a more detailed description of the results, which include
+our choice of hyperparameters, results provided for the project submission, and some
+results from some ablation tests over a few of the features of our implementation.
 
 ### 3.0 Running a pretrained agent
 
-We provide a trained agent (trained with the config_submission.json configuration).
-To use it, just run the following in your terminal:
+We provide a trained agent (trained with the **ddpg_reacher_multi_submission.gin** 
+configuration file). To test this agent just run the following in your terminal:
 
 ```bash
-python trainer.py test --sessionId=banana_submission
+python trainer.py test --config=./configs/ddpg_reacher_multi_submission.gin
 ```
 
-The weights of the trained agent are provided in the **results/banana_submission** folder,
-and are stored in the **banana_submission_model_pytorch.pth** file.
+The submission results consist of the following:
 
-Also, you can check [this](https://youtu.be/ng7e61LNNLs) video of a the pretrained 
-agent collecting bananas.
+* The weights of the trained agent are provided in the **results/session_submission** 
+  folder, and are saved in the **checkpoint_actor.pth** and **checkpoint_critic.pth** 
+  files.
 
-### 3.1 Submission results
+* The tensorboard logs of the training sessions, which can be found in the folder
+  called **results/session_submission/tensorboard_summary**. You can check the training
+  results invoking tensorboard using the command below, and then open the tensorboard
+  client in your browser using the url given in the terminal:
+
+```bash
+tensorboard --logdir=./results/session_submission/tensorboard_summary
+```
+
+Also, you can check [this](https://youtu.be/osYtiJeumOg) video of a the pretrained 
+agent solving the required task.
+
+### 3.1 Hyperparameters
+
+We first started testing both configurations from the udacity's gym-pendulum and
+gym-bipedal ddpg examples. Needless to say that things did not work out that easily,
+as we got some pretty bad results at first, one such run we saved and show below (you
+can notice that the score suddently crashes down).
+
+![ddpg-results-bad-hyperparameters][img_results_bad_hyperparameters]
+
+When we ran into the first issues we usually had small batch sizes (32, 64), not too
+small learning rates (order of 1e-3), and didn't decay the epsilon parameter at all.
+We then decided to be a more conservative with the learning rate (smaller in the order
+of 1e-4), used bigger batch sizes (128-256) and started using noise decay with a good
+schedule for enough exploration. This started to work better, but we still did not get
+the results we wanted.
+
+We then decided to use shallower networks, as the ones we used were a bit too deep to
+start with (specially for the critic), as our original tests had one to two more layers 
+than our final implementation. This ended up working better and eventually after tweaking 
+the learning rates a bit more we finally started to get some better results. We ended up
+adding batch-norm in this situation, as we were checking implementations online in various
+rl-framework. Besides, the original paper mentioned that the usage of batchnorm was important,
+so we decided to use it, as we also had measurements using different scales in our observations 
+(angles, positions and speeds).
+
+Our final choice of hyperparameters can be found in the [ddpg_reacher_multi_submission][url_gin_submission],
+and it contains the following configuration:
+
+Hyperparameter          |     Value     |   Description
+------------------------|---------------|-----------------
+gamma                   | 0.99          | Discount factor
+tau                     | 0.001         | Polyak averaging factor
+replayBufferSize        | 1000000       | Size of the replay buffer
+learning rate - Actor   | 0.001         | Learning rate for the actor (using Adam)
+learning rate - Critic  | 0.001         | Learning rate for the actor (using Adam)
+batchSize               | 256           | Batch size used for a learning step
+trainFrequencySteps     | 20            | How often to request learning from the agent
+trainNumLearningSteps   | 10            | Number of learning steps per learning request of the agent
+noiseType               | 'ounoise'     | Type of noise used, either ounoise='Ornstein-Uhlenbeck', or normal="Sample-gaussian"
+noiseOUMu               | 0.0           | Mu-param &mu; of the Ornstein-Uhlenbeck noise process
+noiseOUTheta            | 0.15          | Theta param &theta; of the Ornstein-Uhlenbeck noise process
+noiseOUSigma            | 0.2           | Sigma param &sigma; of the Ornstein-Uhlenbeck noise process
+noiseNormalStddev       | 0.25          | Standard deviation of the normal noise
+epsilonSchedule         | 'linear'      | Type of schedule used to decay the noise factor &epsilon;,either 'linear' or 'geometric'
+epsilonFactorGeom       | 0.999         | Decay factor for the geometric schedule
+epsilonFactorLinear     | 1e-5          | Decay factor for the linear schedule
+trainingStartingStep    | 0             | At which step to start learning
+
+This configuration worked well and, as we will see in the sub-section below, it allowed us to
+complete the task successfully, i.e. maintain an average reward of +30 over 100 episodes.
+
+### 3.2 Submission results
+
+Using the configuration mentioned earlier we ended up having a working solution that could
+maintain an average reward of +30 over 100 episodes. Below there's a plot of the results
+of a training session with such configuration. Notice that **we reach an average score of
++30 starting at episode 172**, and then maintain it over the remaining episodes.
+
+![ddpg-results-passing-submission][img_results_passing_submission]
+
+Below we show the agent's performance during evaluation. Notice that the agent can smoothly
+follow the goals, missing it just in very few situations for just a small time before recovering.
+
+![ddpg-results-agent-test][gif_project_2_reacher_multi_agent]
+
+### 3.3 Ablation tests
+
+We did some experiments to check which components of our implementation help the most to solve the
+task. The experiments consisted of running with the following configuration variants over various seeds:
+
+* Experiment 1.1 : **Batchnorm + Critic-Gradient-Clipping**
+* Experiment 1.2 : **Batchnorm + NO gradient clipping**
+* Experiment 2.1 : **NO batchnorm + Critic-Gradient-Clipping**
+* Experiment 2.2 : **NO batchnorm + NO gradient clipping**
+
+The results are shown below, both line plots and std-plots to check the behaviour over different
+random seeds.
+
+**Batch-normalization + Gradient-clipping**
 
 
-### 3.2 Experiments
 
+**Batch-normalization + NO Gradient-clipping**
+
+**NO Batch-normalization + Gradient-clipping**
+
+**NO Batch-normalization + NO Gradient-clipping**
 
 ## 4. Future Work
 
