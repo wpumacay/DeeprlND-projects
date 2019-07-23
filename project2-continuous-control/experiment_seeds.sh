@@ -2,7 +2,8 @@
 
 # the seeds for our experiments
 seeds=(0 1 2 3 4 5)
-config="./configs/ddpg_reacher_multi_seeds.gin"
+# config="./configs/ddpg_reacher_multi_seeds.gin"
+config="./configs/ddpg_reacher_multi_seeds_no_clip.gin"
 
 echo "TRAINING TESTS - 0 - RUN OVER VARIOUS SEEDS"
 
