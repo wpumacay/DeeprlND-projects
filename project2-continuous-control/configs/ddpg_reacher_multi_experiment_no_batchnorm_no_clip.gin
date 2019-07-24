@@ -3,15 +3,21 @@ import ccontrol.ddpg.utils.config
 
 SEED = 0
 
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.numTrainingEpisodes    = 1000
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.maxStepsInEpisode      = 3000
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.logWindowSize          = 100
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.seed                   = %SEED
+ccontrol.ddpg.utils.config.DDPGTrainerConfig.sessionID              = 'session_seeds_no_batchnorm'
+
 ccontrol.ddpg.utils.config.DDPGAgentConfig.observationsShape        = (33,)
 ccontrol.ddpg.utils.config.DDPGAgentConfig.actionsShape             = (4,)
 ccontrol.ddpg.utils.config.DDPGAgentConfig.seed                     = %SEED
 ccontrol.ddpg.utils.config.DDPGAgentConfig.gamma                    = 0.99
 ccontrol.ddpg.utils.config.DDPGAgentConfig.tau                      = 0.001
 ccontrol.ddpg.utils.config.DDPGAgentConfig.replayBufferSize         = 1000000
-ccontrol.ddpg.utils.config.DDPGAgentConfig.lrActor                  = 0.001
-ccontrol.ddpg.utils.config.DDPGAgentConfig.lrCritic                 = 0.001
-ccontrol.ddpg.utils.config.DDPGAgentConfig.batchSize                = 256
+ccontrol.ddpg.utils.config.DDPGAgentConfig.lrActor                  = 0.0002
+ccontrol.ddpg.utils.config.DDPGAgentConfig.lrCritic                 = 0.0004
+ccontrol.ddpg.utils.config.DDPGAgentConfig.batchSize                = 128
 ccontrol.ddpg.utils.config.DDPGAgentConfig.trainFrequencySteps      = 20
 ccontrol.ddpg.utils.config.DDPGAgentConfig.trainNumLearningSteps    = 10
 ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseType                = 'ounoise'
@@ -21,7 +27,7 @@ ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseOUSigma             = 0.2
 ccontrol.ddpg.utils.config.DDPGAgentConfig.noiseNormalStddev        = 0.25
 ccontrol.ddpg.utils.config.DDPGAgentConfig.epsilonSchedule          = 'linear'
 ccontrol.ddpg.utils.config.DDPGAgentConfig.epsilonFactorGeom        = 0.999
-ccontrol.ddpg.utils.config.DDPGAgentConfig.epsilonFactorLinear      = 1e-5
+ccontrol.ddpg.utils.config.DDPGAgentConfig.epsilonFactorLinear      = 1e-6
 ccontrol.ddpg.utils.config.DDPGAgentConfig.trainingStartingStep     = 0
 
 actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.observationsShape = (33,)
@@ -29,7 +35,7 @@ actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.actionsShape = (4,)
 actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.inputShape = (33,)
 actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.outputShape = (4,)
 actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.layersDefs = []
-actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.useBatchnorm = True
+actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.useBatchnorm = False
 actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.clipGradients = False
 actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.gradientsClipNorm = 1.
 actor/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.seed = %SEED
@@ -39,7 +45,7 @@ critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.actionsShape = (4,)
 critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.inputShape = (33,)
 critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.outputShape = (1,)
 critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.layersDefs = []
-critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.useBatchnorm = True
+critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.useBatchnorm = False
 critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.clipGradients = False
 critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.gradientsClipNorm = 1.
 critic/ccontrol.ddpg.utils.config.DDPGModelBackboneConfig.seed = %SEED

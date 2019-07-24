@@ -138,18 +138,23 @@ if __name__ == '__main__' :
         executableFullPath = '../../executables/Tennis_Linux/Tennis.x86_64'
         numberOfAgents = 2
 
+    if True :
+        executableFullPath = '../../executables/Crawler_Linux/Crawler.x86_64'
+        numberOfAgents = 12
+
     _env = UnityEnvWrapper( executableFullPath,
                             numAgents = numberOfAgents, mode = 'test', workerID = 0, seed = 0 )
 
-    _ss = _env.reset()
-    for _ in range( 1000 ) :
-        _aa = np.random.randn( *( (numberOfAgents,) + _env.action_space.shape ) )
-        ## _aa = np.zeros( ( (numberOfAgents,) + _env.action_space.shape ) )
-        _ssnext, _rr, _dd, _ = _env.step( _aa )
-
-        if _dd.any() :
-            break
-
-        _ssdelta = _ssnext - _ss
-        _ss = _ssnext
-        set_trace()
+    for _ in range( 10 ) :
+        _ss = _env.reset()
+        for _ in range( 1000 ) :
+            _aa = np.random.randn( *( (numberOfAgents,) + _env.action_space.shape ) )
+            ## _aa = np.zeros( ( (numberOfAgents,) + _env.action_space.shape ) )
+            _ssnext, _rr, _dd, _ = _env.step( _aa )
+    
+            if _dd.any() :
+                break
+    
+            _ssdelta = _ssnext - _ss
+            _ss = _ssnext
+            ## set_trace()
