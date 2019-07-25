@@ -21,6 +21,10 @@
 
 [img_results_bad_hyperparameters]: imgs/img_results_bad_hyperparameters.png
 [img_results_passing_submission]: imgs/img_results_passing_submission.png
+[img_results_experiment_1_1]: imgs/img_results_experiment_1_1.png
+[img_results_experiment_1_2]: imgs/img_results_experiment_1_2.png
+[img_results_experiment_2_1]: imgs/img_results_experiment_2_1.png
+[img_results_experiment_2_2]: imgs/img_results_experiment_2_2.png
 
 <!-- URLS -->
 [url_readme]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/README.md
@@ -1866,18 +1870,37 @@ task. The experiments consisted of running with the following configuration vari
 * Experiment 2.1 : **NO batchnorm + Critic-Gradient-Clipping**
 * Experiment 2.2 : **NO batchnorm + NO gradient clipping**
 
-The results are shown below, both line plots and std-plots to check the behaviour over different
-random seeds.
+The results are shown below using both line plots and std-plots to check the behaviour over 
+different random seeds.
 
 **Batch-normalization + Gradient-clipping**
+
+![ddpg-results-experiment-1-1][img_results_experiment_1_1]
+
 
 
 
 **Batch-normalization + NO Gradient-clipping**
 
+![ddpg-results-experiment-1-2][img_results_experiment_1_2]
+
+
+
+
 **NO Batch-normalization + Gradient-clipping**
 
+![ddpg-results-experiment-2-1][img_results_experiment_2_1]
+
+
+
+
 **NO Batch-normalization + NO Gradient-clipping**
+
+![ddpg-results-experiment-2-2][img_results_experiment_2_2]
+
+
+
+
 
 ## 4. Future Work
 
@@ -1888,11 +1911,11 @@ updates to this post:
 
 ## References
 
-* [1] Sutton, Richard & Barto, Andrew. [*Reinforcement Learning: An introduction.*](http://incompleteideas.net/book/RLbook2018.pdf)
-* [2][*Continuous control through deep reinforcement learning* paper by Lillicrap et. al.](https://arxiv.org/pdf/1509.02971.pdf)
-* [3][*Deterministic Policy Gradients Algorithms* paper by Silver et. al.](http://proceedings.mlr.press/v32/silver14.pdf)
-* [4][DDPG implementation from Udacity](https://github.com/udacity/deep-reinforcement-learning/tree/master/ddpg-pendulum)
-* [5][Post on *Deep Deterministic Policy Gradients* from OpenAI's **Spinning Up in RL**](https://spinningup.openai.com/en/latest/algorithms/ddpg.html)
-* [6][Post on *Policy Gradient Algorithms* by **Lilian Weng**](https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html)
-* [7][*Lecture 8: Advanced Q-Learning Algorithms* from Berkeley's cs294 DeepRL course](https://youtu.be/hP1UHU_1xEQ?t=4365)
+* [1] [Sutton, Richard & Barto, Andrew. *Reinforcement Learning: An introduction.*](http://incompleteideas.net/book/RLbook2018.pdf)
+* [2] [*Continuous control through deep reinforcement learning* paper by Lillicrap et. al.](https://arxiv.org/pdf/1509.02971.pdf)
+* [3] [*Deterministic Policy Gradients Algorithms* paper by Silver et. al.](http://proceedings.mlr.press/v32/silver14.pdf)
+* [4] [DDPG implementation from Udacity](https://github.com/udacity/deep-reinforcement-learning/tree/master/ddpg-pendulum)
+* [5] [Post on *Deep Deterministic Policy Gradients* from OpenAI's **Spinning Up in RL**](https://spinningup.openai.com/en/latest/algorithms/ddpg.html)
+* [6] [Post on *Policy Gradient Algorithms* by **Lilian Weng**](https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html)
+* [7] [*Lecture 8: Advanced Q-Learning Algorithms* from Berkeley's cs294 DeepRL course](https://youtu.be/hP1UHU_1xEQ?t=4365)
 * [8] [Udacity DeepRL Nanodegree](https://www.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893)
