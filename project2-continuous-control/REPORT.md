@@ -67,6 +67,10 @@
 [url_trainer_method_train]: https://github.com/wpumacay/DeeprlND-projects/blob/cbbab21d795b8c0b1d38cacc5f07662efae6352b/project2-continuous-control/trainer.py#L38
 
 [url_gin_submission]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/configs/ddpg_reacher_multi_submission.gin
+[url_gin_file_exp_1_1]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/configs/ddpg_reacher_multi_experiment.gin
+[url_gin_file_exp_1_2]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/configs/ddpg_reacher_multi_experiment_no_clip.gin
+[url_gin_file_exp_2_1]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/configs/ddpg_reacher_multi_experiment_no_batchnorm.gin
+[url_gin_file_exp_2_2]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project2-continuous-control/configs/ddpg_reacher_multi_experiment_no_batchnorm_no_clip.gin
 
 # Using DDPG to solve the Reacher environment from ML-Agents
 
@@ -1871,43 +1875,107 @@ task. The experiments consisted of running with the following configuration vari
 * Experiment 2.2 : **NO batchnorm + NO gradient clipping**
 
 The results are shown below using both line plots and std-plots to check the behaviour over 
-different random seeds.
+6 different random seeds. The figures will show three main components:
+
+* (a) **Raw** scores: cummulative reward in an episode without window-averaging. Recall this
+                      score is actually an average of all agents' scores over an episode.
+
+* (b) **Average** scores: cummulative reward in an episode averaged/smoothed over
+                          a window of size 100.
+
+* (c) **Std-plot** over raw scores: A standard-deviation plot made using the raw
+                                    scores from (a), in order to check variability
+                                    of the method.
 
 **Batch-normalization + Gradient-clipping**
 
+**Gin-Config file**: [ddpg_reacher_multi_experiment.gin][url_gin_file_exp_1_1] 
+
+This experiment consisted on running the same agent configuration, with the
+variation of using both batch normalization and gradient clipping. We wanted
+to check how much batchnorm and gradient clipping helped to stabilize training
+and, as our later experiments without these features will show, at least batch
+normalization had a big impact during training. The figure below shows the training 
+results over 6 different random seeds.
+
 ![ddpg-results-experiment-1-1][img_results_experiment_1_1]
-
-
-
 
 **Batch-normalization + NO Gradient-clipping**
 
+**Gin-Config file**: [ddpg_reacher_multi_experiment_no_clip.gin][url_gin_file_exp_1_2] 
+
+This experiment is almost exactly to the previous one, but we disabled gradient clipping
+to check if it had any effect. As the results suggest we don't get much improvement out
+of using gradient clipping, as the plots are almost the same as the plots from the previous 
+experiment. This kind of makes sense, as batchnorm is already taking care of normalizing
+the internal values inside the network, which in turn it might reduce the magnitude of the 
+gradients we propagate back. However, it'd be interesting to plot the norms of the gradients
+to see if this indeed true.
+
 ![ddpg-results-experiment-1-2][img_results_experiment_1_2]
-
-
-
 
 **NO Batch-normalization + Gradient-clipping**
 
+**Gin-Config file**: [ddpg_reacher_multi_experiment_no_batchnorm.gin][url_gin_file_exp_2_1] 
+
+For this experiment we decided to disable batch normalization and see what happens. It turns
+out that with the same configuration from before (learning rates and some other hyperparameters)
+the performance of the agent just crashed in every experiment. To ammend this issue, we started
+tweaking the learning rates a bit, as well as the schedule of the noise factor. We ended up using
+a bit smaller learning rates (order of 1e-4), compared to the learning rates that could be used
+when using batchnorm (order of 1e-3). This helped stabilize learning a lot, and ultimately allowed
+us to solve the environment successfully. Notice however how this configuration might fail for some
+seeds, which is depicted in the hight variability shown in the plots (one even just crashed altogether).
+In following updates we might try to check why this crashes by analyzing the activations through the
+network, the magnitudes of the gradients, as well as other quantities.
+
 ![ddpg-results-experiment-2-1][img_results_experiment_2_1]
-
-
-
 
 **NO Batch-normalization + NO Gradient-clipping**
 
+**Gin-Config file**: [ddpg_reacher_multi_experiment_no_batchnorm_no_clip.gin][url_gin_file_exp_2_2] 
+
+Finally, for this experiment we disabled both batchnorm and gradient clipping, and run over various seeds
+using the same configuration from the previous experiment. We ended up having identical results to the previous
+experiment, suggesting that the magnitude of the learning rates and some other choices might not gave us
+big gradients.
+
 ![ddpg-results-experiment-2-2][img_results_experiment_2_2]
-
-
-
-
 
 ## 4. Future Work
 
 Finally, below we mention some of the improvements we consider making in following
 updates to this post:
 
-* TODO
+* Analyze the effects of the networks initialization on the performance of the agent, as
+  they initializer used was kind of like pulling a rabbit out of a hat. In cases various
+  initialization schemes just crash and some don't we'd like to analyze these effects and
+  try to come up with better initialization schemes for these agents. Xavier and some other
+  initializations seem to work well as a default initialization scheme, as it tries to normalize
+  the activations over the network at initialization, such that our network does not just crash
+  with dead neurons. Perhaps for RL-based approaches, our function approximators might benefit
+  from special initializations comming from both an approach to have neurons in a good starting
+  regime, as well as with good enough outputs that might ensure good starting actions taken.
+
+* Analyze the internals of the network during training to study its learning dynamics. This
+  would be interesting as we could analyze why some special cases crash, which is usually what
+  happens when training deep-rl based agents.
+
+* Study the effects of the depth of our networks in the training dynamics. As mentioned in previous
+  sections (hyperparameter tuning) we had some initial issues when using deeper networks for both
+  actor and critic. It's usually a rule of thumb to use models that are not to deep, e.g. original
+  Nature DQN backbone was a relatively small network (compared to backbones like resnet34, vgg16, etc.).
+
+* Implement other Policy-Gradient algorithms to solve this task, like PPO and SAC, and compare them
+  with our DDPG implementation as baseline. Also, make the similar study proposed earlier for these
+  algorithms and understand/validate their learning dynamics.
+
+* Tune all baselines and try to solve the optional Walker Task (crawler env. from ml-agents). Currently
+  we're training DDPG on the task and it gets a bit far, but not as far at all as the baseline used in the
+  ml-agents implementation (which I think is PPO-based).
+
+* Finally, we'd like to implement recurrent variants of these agents. It might take way longer to train,
+  but it'd be interesting to see if they give better results.
 
 ## References
 
