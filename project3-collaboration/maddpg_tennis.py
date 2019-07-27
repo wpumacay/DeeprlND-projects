@@ -20,29 +20,39 @@ from tensorboardX import SummaryWriter
 
 from IPython.core.debugger import set_trace
 
+# training parameters (not exposed through the command line)
 NUM_AGENTS              = 2         # number of agents in the multiagent env. setup
-TRAIN                   = True      # whether or not to train our agent
 GAMMA                   = 0.99      # discount factor applied to the rewards
-TAU                     = 0.001     # soft update factor used for target-network updates
-REPLAY_BUFFER_SIZE      = 1000000   # size of the replay memory
-LEARNING_RATE_ACTOR     = 0.001     # learning rate used for actor network
-LEARNING_RATE_CRITIC    = 0.001     # learning rate used for the critic network
-BATCH_SIZE              = 256       # batch size of data to grab for learning
-TRAIN_FREQUENCY_STEPS   = 4         # learn every 10 steps (if there is data)
-TRAIN_NUM_UPDATES       = 2         # number of updates to do when doing a learning
 LOG_WINDOW              = 100       # size of the smoothing window and logging window
-TRAINING_EPISODES       = 50000     # number of training episodes
+TRAINING_EPISODES       = 7000      # number of training episodes
 MAX_STEPS_IN_EPISODE    = 3000      # maximum number of steps in an episode
-SEED                    = 200         # random seed to be used
+SEED                    = 0         # random seed to be used
 EPSILON_SCHEDULE        = 'linear'  # type of shedule 
 EPSILON_DECAY_FACTOR    = 0.999     # decay factor for e-greedy geometric schedule
 EPSILON_DECAY_LINEAR    = 2e-5      # decay factor for e-greedy linear schedule
 TRAINING_STARTING_STEP  = int(5e4)  # step index at which training should start
-TRAINING_SESSION_ID     = 'sess_0'  # name of the training session
+
+# configurable parameters through command line
+TRAIN                   = True                      # whether or not to train our agent
+TRAINING_SESSION_ID     = 'session_default'         # name of the training session
+SESSION_FOLDER          = 'results/session_default' # folder where to save the results of the training session
+REPLAY_BUFFER_SIZE      = 1000000                   # size of the replay memory
+BATCH_SIZE              = 256                       # batch size of data to grab for learning
+LEARNING_RATE_ACTOR     = 0.001                     # learning rate used for actor network
+LEARNING_RATE_CRITIC    = 0.001                     # learning rate used for the critic network
+TAU                     = 0.001                     # soft update factor used for target-network updates
+TRAIN_FREQUENCY_STEPS   = 4                         # learn every 10 steps (if there is data)
+TRAIN_NUM_UPDATES       = 2                         # number of updates to do when doing a learning
 
 DEVICE = torch.device( 'cuda:0' if torch.cuda.is_available() else 'cpu' )
 
 def lecunishUniformInitializer( layer ) :
+    r"""Returns limits lecun-like initialization
+    
+    Args:
+        layer 
+
+    """
     fan_in = layer.weight.data.size()[0]
     lim = 1. / np.sqrt( fan_in / 2 )
     return ( -lim, lim )
@@ -56,10 +66,10 @@ class PiNetwork( nn.Module ) :
         actionShape (tuple): shape of the actions to be computed by the network
 
     """
-    def __init__( self, observationShape, actionShape ) :
+    def __init__( self, observationShape, actionShape, seed ) :
         super( PiNetwork, self ).__init__()
 
-        self.seed = torch.manual_seed( SEED )
+        self.seed = torch.manual_seed( seed )
         self.bn0 = nn.BatchNorm1d( observationShape[0] )
         self.fc1 = nn.Linear( observationShape[0], 256 )
         self.bn1 = nn.BatchNorm1d( 256 )
@@ -103,10 +113,10 @@ class Qnetwork( nn.Module ) :
         jointActionShape (tuple): shape of the augmented action representation [a1,a2,...,an]
 
     """
-    def __init__( self, jointObservationShape, jointActionShape ) :
+    def __init__( self, jointObservationShape, jointActionShape, seed ) :
         super( Qnetwork, self ).__init__()
 
-        self.seed = torch.manual_seed( SEED )
+        self.seed = torch.manual_seed( seed )
 
         self.bn0 = nn.BatchNorm1d( jointObservationShape[0] )
         self.fc1 = nn.Linear( jointObservationShape[0], 128 )
@@ -193,7 +203,6 @@ class ReplayBuffer( object ) :
         numAgents (int): number of agents used during learning (for sanity-checks)
 
     """
-
     def __init__( self, bufferSize, numAgents ) :
         super( ReplayBuffer, self ).__init__()
 
@@ -238,78 +247,74 @@ class ReplayBuffer( object ) :
         return len( self._memory )
 
 
-class OUNoise( object ) :
-
-    def __init__( self, size, mu = 0., theta = 0.15, sigma = 0.05 ) :
-        super( OUNoise, self ).__init__()
-
-        self._mu = mu * np.ones( size )
-        self._theta = theta
-        self._sigma = sigma
-        self._state = self._mu.copy()
-
-
-    def reset( self ) :
-        self._state = self._mu.copy()
-
-
-    def sample( self ) :
-        x = self._state
-        dx = self._theta * ( self._mu - x ) + self._sigma * np.random.rand( *self._mu.shape )
-        self._state = x + dx
-
-        return self._state.copy()
-
-
-class OUNoise2:
-    """Ornstein-Uhlenbeck process."""
-
-    def __init__(self, size, mu=0., theta=0.15, sigma=0.2):
-        """Initialize parameters and noise process."""
-        self.mu = mu * np.ones(size)
+class OUNoise:
+    """Ornstein-Uhlenbeck noise process
+    
+    Args:
+        size (tuple): size of the noise to be generated
+        seed (int): random seed for the rnd-generator
+        mu (float): mu-param of the process
+        theta (float): theta-param of the process
+        sigma (float: sigma-param of the process
+    """
+    def __init__( self, size, seed, mu = 0., theta = 0.15, sigma = 0.2 ) :
+        
+        self.mu = mu * np.ones( size )
         self.theta = theta
         self.sigma = sigma
-        self.seed = random.seed(SEED)
+        self.seed = random.seed( seed )
         self.reset()
 
-    def reset(self):
+    def reset( self ) :
         """Reset the internal state (= noise) to mean (mu)."""
         self.state = copy.copy(self.mu)
 
-    def sample(self):
+    def sample( self ) :
         """Update internal state and return it as a noise sample."""
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.array([random.random() for i in range(len(x))])
+        dx = self.theta * ( self.mu - x ) + self.sigma * np.array( [ random.random() for i in range( len( x ) ) ] )
         self.state = x + dx
+
         return self.state
 
 
-def train( env, num_episodes = 2000 ) :
+def train( env, seed, num_episodes ) :
+    ##------------- Create actor network (+its target counterpart)------------##
     actorsNetsLocal = [ PiNetwork( env.observation_space.shape,
-                                   env.action_space.shape ) for _ in range( NUM_AGENTS ) ]
+                                   env.action_space.shape,
+                                   seed ) for _ in range( NUM_AGENTS ) ]
     actorsNetsTarget = [ PiNetwork( env.observation_space.shape,
-                                    env.action_space.shape ) for _ in range( NUM_AGENTS ) ]
+                                    env.action_space.shape,
+                                    seed ) for _ in range( NUM_AGENTS ) ]
     for _netLocal, _netTarget in zip( actorsNetsLocal, actorsNetsTarget ) :
-        _netTarget.copy( _netLocal )
-        _netLocal.to( DEVICE )
-        _netTarget.to( DEVICE )
-
-    criticsNetsLocal = [ Qnetwork( (NUM_AGENTS * env.observation_space.shape[0],),
-                                   (NUM_AGENTS * env.action_space.shape[0],) ) for _ in range( NUM_AGENTS ) ]
-    criticsNetsTarget = [ Qnetwork( (NUM_AGENTS * env.observation_space.shape[0],),
-                                    (NUM_AGENTS * env.action_space.shape[0],) ) for _ in range( NUM_AGENTS ) ]
-    for _netLocal, _netTarget in zip( criticsNetsLocal, criticsNetsTarget ) :
         _netTarget.copy( _netLocal )
         _netLocal.to( DEVICE )
         _netTarget.to( DEVICE )
 
     optimsActors = [ opt.Adam( _actorNet.parameters(), lr = LEARNING_RATE_ACTOR ) \
                         for _actorNet in actorsNetsLocal ]
+
+    ##----------- Create critic network (+its target counterpart)-------------##
+    criticsNetsLocal = [ Qnetwork( (NUM_AGENTS * env.observation_space.shape[0],),
+                                   (NUM_AGENTS * env.action_space.shape[0],),
+                                   seed ) for _ in range( NUM_AGENTS ) ]
+    criticsNetsTarget = [ Qnetwork( (NUM_AGENTS * env.observation_space.shape[0],),
+                                    (NUM_AGENTS * env.action_space.shape[0],),
+                                    seed ) for _ in range( NUM_AGENTS ) ]
+    for _netLocal, _netTarget in zip( criticsNetsLocal, criticsNetsTarget ) :
+        _netTarget.copy( _netLocal )
+        _netLocal.to( DEVICE )
+        _netTarget.to( DEVICE )
+
     optimsCritics = [ opt.Adam( _criticNet.parameters(), lr = LEARNING_RATE_CRITIC ) \
                         for _criticNet in criticsNetsLocal ]
 
+    # Circular Replay buffer
     rbuffer = ReplayBuffer( REPLAY_BUFFER_SIZE, NUM_AGENTS )
-    noise = OUNoise2( env.action_space.shape )
+    # Noise process
+    noise = OUNoise( env.action_space.shape, seed )
+    # Noise scaler factor (annealed with a schedule)
+    epsilon = 1.0
 
     progressbar = tqdm( range( 1, num_episodes + 1 ), desc = 'Training>' )
 
@@ -318,9 +323,8 @@ def train( env, num_episodes = 2000 ) :
     bestScore = -np.inf
     avgScore = -np.inf
 
-    writer = SummaryWriter( 'summary_maddpg_' + TRAINING_SESSION_ID + '_reacher_bn' )
+    writer = SummaryWriter( os.path.join( SESSION_FOLDER, 'tensorboard_summary' ) )
     istep = 0
-    epsilon = 1.0
 
     for iepisode in progressbar :
 
@@ -329,21 +333,30 @@ def train( env, num_episodes = 2000 ) :
         _scoreAgents = np.zeros( NUM_AGENTS )
 
         for i in range( MAX_STEPS_IN_EPISODE ) :
+            # take full-random actions during these many steps
             if istep < TRAINING_STARTING_STEP :
                 _aa = np.clip( np.random.randn( *((NUM_AGENTS,) + env.action_space.shape) ), -1., 1. )
+            # take actions from exploratory policy
             else :
+                # eval-mode (in case batchnorm is used)
                 for _actorNet in actorsNetsLocal :
                     _actorNet.eval()
+
                 # choose an action for each agent using its own actor network
                 with torch.no_grad() :
                     _aa = []
                     for iactor, _actorNet in enumerate( actorsNetsLocal ) :
+                        # evaluate action to take from each actor policy
                         _a = _actorNet( torch.from_numpy( _oo[iactor] ).unsqueeze( 0 ).float().to( DEVICE ) ).cpu().data.numpy().squeeze()
                         _aa.append( _a )
                     _aa = np.array( _aa )
+                    # add some noise sampled from the noise process (each agent gets different sample)
                     _nn = np.array( [ epsilon * noise.sample() for _ in range( NUM_AGENTS ) ] ).reshape( _aa.shape )
                     _aa += _nn
-                    _aa = np.clip( _aa, -1., 1. ) # actions are speed-factors (range (-1,1)) in both x and y
+                    # actions are speed-factors (range (-1,1)) in both x and y
+                    _aa = np.clip( _aa, -1., 1. )
+
+                # back to train-mode (in case batchnorm is used)
                 for _actorNet in actorsNetsLocal :
                     _actorNet.train()
 
@@ -453,16 +466,15 @@ def train( env, num_episodes = 2000 ) :
                         epsilon = max( 0.1, epsilon * EPSILON_DECAY_FACTOR )
 
                 for iactor in range( NUM_AGENTS ) :
-                    torch.save( actorsNetsLocal[iactor].state_dict(), './results/maddpg_actor_reacher_' + str(iactor) + '_' + TRAINING_SESSION_ID + '.pth' )
-                    torch.save( criticsNetsLocal[iactor].state_dict(), './results/maddpg_critic_reacher_' + str(iactor) + '_' + TRAINING_SESSION_ID + '.pth' )
+                    torch.save( actorsNetsLocal[iactor].state_dict(), 
+                                os.path.join( SESSION_FOLDER, 'maddpg_actor_reacher_' + str(iactor) + '.pth' ) )
+                    torch.save( criticsNetsLocal[iactor].state_dict(), 
+                                os.path.join( SESSION_FOLDER, 'maddpg_critic_reacher_' + str(iactor) + '.pth' ) )
 
             # book keeping for next iteration
             _oo = _oonext
             _scoreAgents += _rr
             istep += 1
-
-            ## if np.mean( _rr ) > 0. :
-            ##     set_trace()
 
             if _dd.any() :
                 break
@@ -489,22 +501,28 @@ def train( env, num_episodes = 2000 ) :
         writer.add_scalar( 'epsilon', epsilon, iepisode )
 
     for iactor in range( NUM_AGENTS ) :
-        torch.save( actorsNetsLocal[iactor].state_dict(), './results/maddpg_actor_reacher_' + str(iactor) + '_' + TRAINING_SESSION_ID + '.pth' )
-        torch.save( criticsNetsLocal[iactor].state_dict(), './results/maddpg_critic_reacher_' + str(iactor) + '_' + TRAINING_SESSION_ID + '.pth' )
+        torch.save( actorsNetsLocal[iactor].state_dict(), 
+                    os.path.join( SESSION_FOLDER, 'maddpg_actor_reacher_' + str(iactor) + '.pth' ) )
+        torch.save( criticsNetsLocal[iactor].state_dict(), 
+                    os.path.join( SESSION_FOLDER, 'maddpg_critic_reacher_' + str(iactor) + '.pth' ) )
 
 
-def test( env, num_episodes = 10 ) :
+def test( env, seed, num_episodes ) :
     actorsNets = [ PiNetwork( env.observation_space.shape,
-                              env.action_space.shape ) for _ in range( NUM_AGENTS ) ]
+                              env.action_space.shape,
+                              seed ) for _ in range( NUM_AGENTS ) ]
     for iactor, _actorNet in enumerate( actorsNets ) :
         _actorNet.load_state_dict( torch.load( './results/maddpg_actor_reacher_' + str( iactor ) + '_' + TRAINING_SESSION_ID + '.pth' ) )
         _actorNet.eval()
 
-    for _ in tqdm( range( num_episodes ), desc = 'Testing> ' ) :
+    progressbar = tqdm( range( 1, num_episodes + 1 ), desc = 'Testing>' )
+
+    for _ in progressbar :
         _done = False
         _oo = env.reset()
+        _scoreAgents = np.zeros( NUM_AGENTS )
 
-        while not _done :
+        while True :
             # compute actions for each actor
             _aa = []
             for iactor, _actorNet in enumerate( actorsNets ) :
@@ -515,11 +533,22 @@ def test( env, num_episodes = 10 ) :
             _oo, _rr, _dd, _ = env.step( _aa )
             env.render()
 
+            _scoreAgents += _rr
+
+            if _dd.any() :
+                break
+
+        _score = np.max( _scoreAgents ) # score of the game is the max over both agents' scores
+
+        progressbar.set_description( 'Testing> score: %.2f' % ( _score ) )
+        progressbar.refresh()
+
 
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser()
     parser.add_argument( 'mode', help='mode to run the script (train|test)', type=str, choices=['train','test'], default='train' )
     parser.add_argument( '--sessionId', help='unique identifier of this training run', type=str, default='session_default' )
+    parser.add_argument( '--seed', help='random seed for the rnd-generators', type=int, default=SEED )
     parser.add_argument( '--hp_replay_buffer_size', help='size of the replay buffer to be used', type=int, default=REPLAY_BUFFER_SIZE )
     parser.add_argument( '--hp_batch_size', help='batch size for updates on both the actor and critic', type=int, default=BATCH_SIZE )
     parser.add_argument( '--hp_lrate_actor', help='learning rate used for the actor', type=float, default=LEARNING_RATE_ACTOR )
@@ -530,8 +559,10 @@ if __name__ == '__main__' :
 
     args = parser.parse_args()
 
+    SEED                    = args.seed
     TRAIN                   = ( args.mode.lower() == 'train' )
     TRAINING_SESSION_ID     = args.sessionId
+    SESSION_FOLDER          = os.path.join( './results', TRAINING_SESSION_ID )
     REPLAY_BUFFER_SIZE      = args.hp_replay_buffer_size
     BATCH_SIZE              = args.hp_batch_size
     LEARNING_RATE_ACTOR     = args.hp_lrate_actor
@@ -540,6 +571,14 @@ if __name__ == '__main__' :
     TRAIN_FREQUENCY_STEPS   = args.hp_train_update_freq
     TRAIN_NUM_UPDATES       = args.hp_train_num_updates
 
+    if not os.path.exists( SESSION_FOLDER ) :
+        os.makedirs( SESSION_FOLDER )
+
+    # in case the results directory for this session does not exist, create a new one
+    
+    if not os.path.exists( SESSION_FOLDER ) :
+        os.makedirs( SESSION_FOLDER )
+
     print( '#############################################################' )
     print( '#                                                           #' )
     print( '#            Environment and agent setup                    #' )
@@ -547,6 +586,7 @@ if __name__ == '__main__' :
     print( '#############################################################' )
     print( 'Mode                    : ', args.mode.lower() )
     print( 'SessionId               : ', args.sessionId )
+    print( 'Seed                    : ', SEED )
     print( 'Replay buffer size      : ', args.hp_replay_buffer_size )
     print( 'Batch size              : ', args.hp_batch_size )
     print( 'Learning-rate actor     : ', args.hp_lrate_actor )
@@ -561,7 +601,7 @@ if __name__ == '__main__' :
     env = UnityEnvWrapper( executableFullPath,
                            numAgents = 2, 
                            mode = 'training' if TRAIN else 'testing', 
-                           workerID = 2, 
+                           workerID = 0, 
                            seed = SEED )
 
     env.seed( SEED )
@@ -570,6 +610,6 @@ if __name__ == '__main__' :
     torch.manual_seed( SEED )
 
     if TRAIN :
-        train( env, TRAINING_EPISODES )
+        train( env, SEED, TRAINING_EPISODES )
     else :
-        test( env )
+        test( env, SEED, 10 )
