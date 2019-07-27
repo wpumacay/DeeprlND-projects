@@ -1,5 +1,6 @@
 
 import os
+import sys
 import gym
 import copy
 import random
@@ -8,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from collections import deque
+from torchsummary import summary
 
 import torch
 from torch import nn
@@ -294,6 +296,10 @@ def train( env, seed, num_episodes ) :
     optimsActors = [ opt.Adam( _actorNet.parameters(), lr = LEARNING_RATE_ACTOR ) \
                         for _actorNet in actorsNetsLocal ]
 
+    # print a brief summary of the network
+    summary( actorsNetsLocal[0], env.observation_space.shape )
+    print( actorsNetsLocal[0] )
+    
     ##----------- Create critic network (+its target counterpart)-------------##
     criticsNetsLocal = [ Qnetwork( (NUM_AGENTS * env.observation_space.shape[0],),
                                    (NUM_AGENTS * env.action_space.shape[0],),
@@ -308,6 +314,12 @@ def train( env, seed, num_episodes ) :
 
     optimsCritics = [ opt.Adam( _criticNet.parameters(), lr = LEARNING_RATE_CRITIC ) \
                         for _criticNet in criticsNetsLocal ]
+
+    # print a brief summary of the network
+    summary( criticsNetsLocal[0], [(NUM_AGENTS * env.observation_space.shape[0],),
+                                   (NUM_AGENTS * env.action_space.shape[0],)] )
+    print( criticsNetsLocal[0] )
+    ##------------------------------------------------------------------------##
 
     # Circular Replay buffer
     rbuffer = ReplayBuffer( REPLAY_BUFFER_SIZE, NUM_AGENTS )
@@ -601,7 +613,7 @@ if __name__ == '__main__' :
     env = UnityEnvWrapper( executableFullPath,
                            numAgents = 2, 
                            mode = 'training' if TRAIN else 'testing', 
-                           workerID = 0, 
+                           workerID = 200, 
                            seed = SEED )
 
     env.seed( SEED )
