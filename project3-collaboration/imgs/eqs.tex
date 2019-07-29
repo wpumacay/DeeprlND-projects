@@ -1,0 +1,43 @@
+
+\begin{aligned}
+\triangleright && \pi^{(i)}_{\theta}(a_{t}^{(i)} | \overbrace{o_{t}^{(i)}}^{local-obs.}) && \scriptstyle{\text{; Stochastic policy}} \\
+\triangleright && a_{t}^{(i)} = \pi^{(i)}_{\theta}( \underbrace{o_{t}^{(i)}}_{local-obs.} ) && \scriptstyle{\text{; Deterministic policy}}
+\end{aligned}
+
+$$Q^{(i)}_{\phi}(\underbrace{[o^{(1)}_{t},o^{(2)}_{t},\hdots,o^{(n)}_{t}]}_{joint-observation},\underbrace{[a^{(1)}_{t},a^{(2)}_{t},\hdots,a^{(n)}_{t}]}_{joint-action})$$
+
+\begin{aligned}
+\triangleright && a_{t} = \mu_{\theta}(o_{t}) && \scriptstyle{\text{; determinisitc actor network}} \\
+\triangleright && a_{t} = \mu_{\theta^{-}}(o_{t}) && \scriptstyle{\text{; target actor network}}
+\end{aligned}
+
+\begin{aligned}
+\triangleright && Q_{\phi}(o_{t},a_{t}) && \scriptstyle{\text{; Critic Q-network}} \\
+\triangleright && Q_{\phi^{-}}(o_{t},a_{t}) && \scriptstyle{\text{; Target Q-network}}
+\end{aligned}
+
+\begin{aligned}
+\triangleright && \phi := \phi - \alpha \nabla_{\phi}\frac{1}{\vert B \vert} \sum_{k=1}^{\vert B \vert}\Vert y_{k} - Q_\phi(o_{k},a_{k}) \Vert^{2} && \scriptstyle{\text{; fitted q-learning}}
+\end{aligned}
+
+\begin{aligned}
+\triangleright && \theta := \theta + \beta \frac{1}{\vert B \vert} \sum_{k=1}^{\vert B \vert} \nabla_{a} Q(o,a)\vert_{o=o_{k},a=a_{k}} \nabla_{\theta} \mu_{\theta}(o)\vert_{o=o_{k}} && \scriptstyle{\text{; DPG-theorem update}}
+\end{aligned}
+
+\begin{aligned}
+\triangleright && a_{t}^{(i)} = \mu^{(i)}_{\theta}(o_{t}^{(i)}) && \scriptstyle{\text{; determinisitc actor network}} \\
+\triangleright && a_{t}^{(i)} = \mu^{(i)}_{\theta^{-}}(o_{t}^{(i)}) && \scriptstyle{\text{; target actor network}}
+\end{aligned}
+
+\begin{aligned}
+\triangleright && Q^{(i)}_{\phi}(\overbrace{[o^{(1)}_{t},o^{(2)}_{t},\hdots,o^{(n)}_{t}]}^{joint-observation},\overbrace{[a^{(1)}_{t},a^{(2)}_{t},\hdots,a^{(n)}_{t}]}^{joint-action}) && \scriptstyle{\text{; ith critic-network}}\\
+\triangleright && Q^{(i)}_{\phi^{-}}(\underbrace{[o^{(1)}_{t},o^{(2)}_{t},\hdots,o^{(n)}_{t}]}_{joint-observation},\underbrace{[a^{(1)}_{t},a^{(2)}_{t},\hdots,a^{(n)}_{t}]}_{joint-action}) && \scriptstyle{\text{; ith target critic-network}}
+\end{aligned}
+
+\begin{aligned}
+\triangleright && \phi^{(i)} := \phi^{(i)} - \alpha \nabla_{\phi^{(i)}}\frac{1}{\vert B \vert} \sum_{k=1}^{\vert B \vert}\Vert y^{(i)}_{k} - Q_{\phi^{(i)}}(\bar{o_{k}},\bar{a_{k}}) \Vert^{2}
+\end{aligned}
+
+\begin{aligned}
+\triangleright && \theta^{(i)} := \theta^{(i)} + \beta \frac{1}{\vert B \vert} \sum_{k=1}^{\vert B \vert} \nabla_{\bar{a}} Q_{\phi^{(i)}}(\bar{o},\bar{a})\vert_{\bar{o}=\bar{o}_{k},\bar{a}=\bar{a}_{k}} \nabla_{\theta^{(i)}} \mu_{\theta^{(i)}}(\bar{o})\vert_{\bar{o}=\bar{o}_{k}}
+\end{aligned}
