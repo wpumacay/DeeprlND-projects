@@ -83,14 +83,16 @@ will cover in our submission:
     
 * [Implementation](#2-implementation)
     * [Agent implementation](#21-agent)
-    * [Model implementation](#22-model)
+    * [Model implementation](#22-models)
     * [Config implementation](#23-config)
     * [Utilities implementation](#24-utils)
     * [Trainer implementation](#25-trainer)
 
 * [Results](#3-results)
     * [Running a pretrained agent](#30-running-a-pretrained-agent)
-    * [Submission results](#31-submission-results)
+    * [Hyperparameters](#31-hyperparameters)
+    * [Submission results](#32-submission-results)
+    * [Ablation tests](#33-experiments-results)
 
 * [Future work](#4-future-work)
 

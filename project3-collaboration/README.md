@@ -256,6 +256,18 @@ cp {PATH_TO_ZIPPED_EXECUTABLE}/Tennis_Linux.zip ./
 unzip Tennis_Linux.zip
 ```
 
+* (Optional) In case you run into issues with **protobuf** due to tensorboardX (used
+  for training) then just uninstall protobuf and install it again. This is caused by
+  a mismatch in the versions installed by the unityagents=0.4.0 package and the one 
+  required by the tensorboardX package.
+
+```bash
+# uninstall protobuf
+pip uninstall protobuf
+# install protobuf again
+pip install protobuf
+```
+
 ## 3. Training and testing
 
 To train the agent we provided a trainer script ([trainer.py][url_trainer_script]) 
@@ -307,14 +319,14 @@ parameter passed through the command line. The saved results consist of the foll
   **checkpoint_actor_#AGENT.pth** and **checkpoint_critic_#AGENT.pth** respectively,
   for example:
 
-  * Agent-1: **./results/session_default/checkpoint_actor_1.pth**, **./results/session_default/checkpoint_critic_1.pth**
-  * Agent-2: **./results/session_default/checkpoint_actor_2.pth**, **./results/session_default/checkpoint_critic_2.pth**
+  * Agent-1: **./results/session_default/checkpoint_actor_0.pth**, **./results/session_default/checkpoint_critic_0.pth**
+  * Agent-2: **./results/session_default/checkpoint_actor_1.pth**, **./results/session_default/checkpoint_critic_1.pth**
 
 * The training logs are stored in a **tensorboard** file (using [tensorboardX][url_tensorboardX]
   as library for interoperatibility with tensorboard) located inside a folder with
-  name *tensorboard_summary_SESSION_ID*, for example: 
+  name *tensorboard_summary*, for example: 
 
-  * Summary: **./results/session_default/tensorboard_summary_session_default/events.out.tfevents.1563313949.labpc**
+  * Summary: **./results/session_default/tensorboard_summary/events.out.tfevents.1563313949.labpc**
 
 To test the trained agent just run the trainer script in test mode as follows:
 
@@ -334,16 +346,16 @@ to the folder where the training logs are:
 
 ```bash
 # invoque tensorboard there
-tensorboard --logdir=./results/SOME_SESSION_NAME/tensorboard_summary_SOME_SESSION_NAME
+tensorboard --logdir=./results/SOME_SESSION_NAME/tensorboard_summary
 # or, invoque it with a specific port, in case you have multiple tensorboard sessions running
-tensorboard --logdir=./results/SOME_SESSION_NAME/tensorboard_summary_SOME_SESSION_NAME --port=SOME_PORT
+tensorboard --logdir=./results/SOME_SESSION_NAME/tensorboard_summary --port=SOME_PORT
 ```
 
 For example, to check the training logs of the agent trained for the project submission, 
 just do the following:
 
 ```bash
-tensorboard --logdir=./results/session_submission/tensorboard_summary_session_submission/
+tensorboard --logdir=./results/session_submission/tensorboard_summary/
 ```
 
 ## References

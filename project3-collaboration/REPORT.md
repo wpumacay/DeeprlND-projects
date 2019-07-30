@@ -37,21 +37,23 @@ This is an accompanying report for the project-3 submission. Below we list some 
 will cover in our submission:
 
 * [Algorithm description](#1-algorithm-description)
-    * [MADDPG algorithm overview](#11-ddpg-algorithm-overview)
+    * [MADDPG algorithm overview](#11-maddpg-algorithm-overview)
     * [Models architecture](#12-models-architecture)
     
 * [Implementation](#2-implementation)
-    * [Model implementation](#21-model)
+    * [Models implementation](#21-models)
     * [Utilities implementation](#22-utils)
     * [Trainer implementation](#23-trainer)
 
 * [Results](#3-results)
     * [Running a pretrained agent](#30-running-a-pretrained-agent)
-    * [Submission results](#31-submission-results)
+    * [Hyperparameters](#31-hyperparameters)
+    * [Submission results](#32-submission-results)
+    * [Experiments results](#33-experiments-results)
 
 * [Future work](#4-future-work)
 
-## 1. Agent description
+## 1. Algorithm description
 
 In this section we give a brief description of the MADDPG algorithm from [2], which 
 is an extension of the DDPG algorithm [3] for multi-agent rl setups. We recommend to
@@ -60,7 +62,7 @@ it [here][url_report_proj2]), as it provides a description of the DDPG algorithm
 might be useful in case you need a refresher.
 
 
-### 1.1 Multi-Agent Deep Deterministic Policy Gradients (MADDPG) overview
+### 1.1 MADDPG algorithm overview
 
 **TL;DR**
 > MADDPG [2] is an multi-agent actor-critic algorithm based on DDPG [3] that makes
@@ -202,6 +204,36 @@ network.
 
 ![rl-maddpg-actor-network][img_rl_maddpg_network_architecture_actor]
 
+```
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+       BatchNorm1d-1                   [-1, 24]              48
+            Linear-2                  [-1, 256]           6,400
+       BatchNorm1d-3                  [-1, 256]             512
+            Linear-4                  [-1, 128]          32,896
+       BatchNorm1d-5                  [-1, 128]             256
+            Linear-6                    [-1, 2]             258
+================================================================
+Total params: 40,370
+Trainable params: 40,370
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 0.00
+Forward/backward pass size (MB): 0.01
+Params size (MB): 0.15
+Estimated Total Size (MB): 0.16
+----------------------------------------------------------------
+PiNetwork(
+  (bn0): BatchNorm1d(24, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (fc1): Linear(in_features=24, out_features=256, bias=True)
+  (bn1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (fc2): Linear(in_features=256, out_features=128, bias=True)
+  (bn2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (fc3): Linear(in_features=128, out_features=2, bias=True)
+)
+```
+
 ### **Critic-network architecture**
 
 Our critic is a Q-function that accepts augmented versions of the observations and
@@ -216,6 +248,32 @@ combining them as both inputs in a single vector. The resulting architecture is 
 as a small summary of the network.
 
 ![rl-maddpg-critic-network][img_rl_maddpg_network_architecture_critic]
+
+```
+----------------------------------------------------------------
+        Layer (type)               Output Shape         Param #
+================================================================
+       BatchNorm1d-1                   [-1, 48]              96
+            Linear-2                  [-1, 128]           6,272
+            Linear-3                  [-1, 128]          17,024
+            Linear-4                    [-1, 1]             129
+================================================================
+Total params: 23,521
+Trainable params: 23,521
+Non-trainable params: 0
+----------------------------------------------------------------
+Input size (MB): 0.00
+Forward/backward pass size (MB): 0.00
+Params size (MB): 0.09
+Estimated Total Size (MB): 0.09
+----------------------------------------------------------------
+Qnetwork(
+  (bn0): BatchNorm1d(48, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (fc1): Linear(in_features=48, out_features=128, bias=True)
+  (fc2): Linear(in_features=132, out_features=128, bias=True)
+  (fc3): Linear(in_features=128, out_features=1, bias=True)
+)
+```
 
 ## 2. Implementation
 
