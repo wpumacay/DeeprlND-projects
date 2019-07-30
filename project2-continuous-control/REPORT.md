@@ -92,7 +92,7 @@ will cover in our submission:
     * [Running a pretrained agent](#30-running-a-pretrained-agent)
     * [Hyperparameters](#31-hyperparameters)
     * [Submission results](#32-submission-results)
-    * [Ablation tests](#33-experiments-results)
+    * [Ablation tests](#33-ablation-results)
 
 * [Future work](#4-future-work)
 
@@ -103,7 +103,7 @@ are various details to take into account in order to understand the algorithm pr
 so below I try to give a small overview that might be helpful to understand a bit 
 better the algorithm and contrast it with other policy based algorithms in the literature.
 
-### 1.1 Deep Deterministic Policy Gradients overview
+### 1.1 DDPG algorithm overview
 
 **TL;DR**
 > DDPG [2] is an actor-critic algorithm that can be thought as an **approximate version of DQN** 

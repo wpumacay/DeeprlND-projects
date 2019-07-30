@@ -274,7 +274,7 @@ To train the agent we provided a trainer script ([trainer.py][url_trainer_script
 which you can use in the following way:
 
 ```bash
-python trainer.py train --OPTIONAL-FLAGS=OPTIONAL-FLAGS-VALUES
+python maddpg_tennis.py train --OPTIONAL-FLAGS=OPTIONAL-FLAGS-VALUES
 ```
 
 This requests the trainer to run a training session using options passed through
@@ -331,14 +331,14 @@ parameter passed through the command line. The saved results consist of the foll
 To test the trained agent just run the trainer script in test mode as follows:
 
 ```bash
-python trainer.py test --sessionID=YOUR_SESSION_ID
+python maddpg_tennis.py test --sessionID=YOUR_SESSION_ID
 ```
 
 To run the pretrained agent provided as part of the project submission just run the 
 following:
 
 ```bash
-python trainer.py test --sessionID=session_submission
+python maddpg_tennis.py test --sessionID=session_submission
 ```
 
 Finally, to check the training logs using tensorboard just invoque tensorboard pointing

@@ -278,6 +278,29 @@ class OUNoise:
         return self.state
 
 
+class NormalNoise( object ):
+    """A simple normal-noise sampler
+        
+    Args:
+        size (tuple): size of the noise to be generated
+        seed (int): random seed for the rnd-generator
+        sigma (float): standard deviation of the normal distribution
+    """
+    def __init__( self, size, seed, sigma = 0.2 ) :
+        super( NormalNoise, self ).__init__()
+
+        self._size = size
+        self._seed = np.random.seed( seed )
+        self._sigma = sigma
+
+    def reset( self ) :
+        pass
+
+    def sample( self ) :
+        _res =  self._sigma * np.random.randn( *self._size )
+        return _res
+
+
 def train( env, seed, num_episodes ) :
     ##------------- Create actor network (+its target counterpart)------------##
     actorsNetsLocal = [ PiNetwork( env.observation_space.shape,

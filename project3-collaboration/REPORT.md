@@ -28,10 +28,10 @@
 [url_impl_model_critic]: https://github.com/wpumacay/DeeprlND-projects/blob/f73d74997ef9ab5c44e2d717a74d4e96874ebbd4/project3-collaboration/maddpg_tennis.py#L110
 [url_impl_replay_buffer]: https://github.com/wpumacay/DeeprlND-projects/blob/f73d74997ef9ab5c44e2d717a74d4e96874ebbd4/project3-collaboration/maddpg_tennis.py#L158
 [url_impl_replay_noisegen_ouproc]: https://github.com/wpumacay/DeeprlND-projects/blob/f73d74997ef9ab5c44e2d717a74d4e96874ebbd4/project3-collaboration/maddpg_tennis.py#L252
-[url_impl_replay_noisegen_normal]: https://github.com/wpumacay/DeeprlND-projects/blob/f73d74997ef9ab5c44e2d717a74d4e96874ebbd4/project3-collaboration/maddpg_tennis.py#L284
-[url_impl_trainer]: https://github.com/wpumacay/DeeprlND-projects/blob/f73d74997ef9ab5c44e2d717a74d4e96874ebbd4/project3-collaboration/maddpg_tennis.py#L307
+[url_impl_replay_noisegen_normal]: https://github.com/wpumacay/DeeprlND-projects/blob/f73d74997ef9ab5c44e2d717a74d4e96874ebbd4/project3-collaboration/maddpg_tennis.py#L281
+[url_impl_trainer]: https://github.com/wpumacay/DeeprlND-projects/blob/f73d74997ef9ab5c44e2d717a74d4e96874ebbd4/project3-collaboration/maddpg_tennis.py#L304
 
-# Using DDPG to solve the Reacher environment from ML-Agents
+# Using MADDPG to solve the Tennis environment from ML-Agents
 
 This is an accompanying report for the project-3 submission. Below we list some key details we
 will cover in our submission:
@@ -877,11 +877,19 @@ test over different random seeds to check variability.
 
 ### 3.0 Running a pretrained agent
 
-We provide a pre-trained agent (trained with the hyperparameters for the submission). To 
-test this agent just run the following in your terminal:
+We provide pre-trained agents that used the initial implementation (trained with the 
+hyperparameters for the submission). To test these agents just run the following in 
+your terminal:
 
 ```bash
-python trainer.py test --sessionId=session_submission
+python maddpg_tennis.py test --sessionId=session_submission
+```
+
+There are also pre-trained agents that were trained using the original-paper implementation.
+To test these just run the following in your terminal:
+
+```bash
+python maddpg_tennis_original.py test --sessionId=session_submission
 ```
 
 The submission results consist of the following:
@@ -899,7 +907,14 @@ The submission results consist of the following:
 tensorboard --logdir=./results/session_submission/tensorboard_summary
 ```
 
-Also, you can check [this](https://youtu.be/osYtiJeumOg) video of the pre-trained 
+Notice that there are also results for the submission using the original implementation,
+which can be checked in a similar way as follows:
+
+```bash
+tensorboard --logdir=./results/session_submission_original/tensorboard_summary
+```
+
+Also, you can check [this](https://youtu.be/jxE4OoPmtzM) video of the pre-trained 
 agent solving the required task.
 
 ### 3.1 Hyperparameters
