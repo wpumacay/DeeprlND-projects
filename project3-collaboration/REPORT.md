@@ -16,6 +16,10 @@
 [img_rl_maddpg_algorithm]: imgs/img_rl_maddpg_algorithm.png
 [img_rl_maddpg_network_architecture_actor]: imgs/img_rl_maddpg_network_architecture_actor.png
 [img_rl_maddpg_network_architecture_critic]: imgs/img_rl_maddpg_network_architecture_critic.png
+[img_results_submission_1]: imgs/img_results_passing_submission_1.png
+[img_results_submission_2]: imgs/img_results_passing_submission_2.png
+[img_results_initial_implementation]: imgs/img_results_initial_implementation.png
+[img_results_original_implementation]: imgs/img_results_original_implementation.png
 
 <!-- URLS -->
 [url_readme]: https://github.com/wpumacay/DeeprlND-projects/blob/master/project3-collaboration/README.md
@@ -811,22 +815,22 @@ implementation of the MADDPG algorithm.
 
 In this section we give a more detailed description of the results, which include
 our choice of hyperparameters, results provided for the project submission, and some
-results from some ablation tests over a few of the features of our implementation.
+test over different random seeds to check variability.
 
 ### 3.0 Running a pretrained agent
 
-We provide a trained agent (trained with the **ddpg_reacher_multi_submission.gin** 
-configuration file). To test this agent just run the following in your terminal:
+We provide a pre-trained agent (trained with the hyperparameters for the submission). To 
+test this agent just run the following in your terminal:
 
 ```bash
-python trainer.py test --config=./configs/ddpg_reacher_multi_submission.gin
+python trainer.py test --sessionId=session_submission
 ```
 
 The submission results consist of the following:
 
 * The weights of the trained agent are provided in the **results/session_submission** 
-  folder, and are saved in the **checkpoint_actor.pth** and **checkpoint_critic.pth** 
-  files.
+  folder, and are saved in the **checkpoint_actor_0.pth**, **checkpoint_actor_1.pth**,
+  **checkpoint_critic_0.pth** and **checkpoint_critic_1.pth** files.
 
 * The tensorboard logs of the training sessions, which can be found in the folder
   called **results/session_submission/tensorboard_summary**. You can check the training
@@ -837,20 +841,167 @@ The submission results consist of the following:
 tensorboard --logdir=./results/session_submission/tensorboard_summary
 ```
 
-Also, you can check [this](https://youtu.be/osYtiJeumOg) video of a the pretrained 
+Also, you can check [this](https://youtu.be/osYtiJeumOg) video of the pre-trained 
 agent solving the required task.
 
 ### 3.1 Hyperparameters
 
+The hyperparameters available are the same as in the single-agent case of DDPG. We
+started with the same hyperparameters as in the previous project (for the batch-norm
+case), and then started tweaking them until we got a working solution. The way we approached
+this tuning process was mostly heuristic (based on intuition of the training dynamics), as 
+we couldn't afford running either grid-search nor random-search due to compute constraints.
+Below we mention the steps taken to arrive at the hyperparameters that best work for us so far.
 
+* We let the agents train with that configuration at first, and noticed that the episodes
+  termiate very quickly, and that they did not learn much at first as the noise forced the
+  agents at first to take too extreme actions. To ammend this, we decided to give the agents
+  a period of random exploration before starting taking learning steps.
+
+* Also, as at first we don't usually receive that many good episodes, we decided to avoid taking
+  too many learning steps per update, and reduce it to a sweetspot of 4:2 (update every 4 timesteps,
+  take two learning step per update).
+
+* After only those two changes we started getting good results (almost reaching the objective of +0.5),
+  so we just adjusted the epsilon factor by looking at the tensorboard plots and identifying a sweetspot
+  for this factor (as at first we had a too small decay factor).
+
+The final hyperparameters used for the submission using the initial MADDPG implementation are shown in
+the table below.
+
+Hyperparameter              |     Value     |   Description
+----------------------------|---------------|-----------------
+gamma                       | 0.99          | Discount factor
+tau                         | 0.001         | Polyak averaging factor
+replay-buffer size          | 1000000       | Size of the replay buffer
+learning rate - Actor       | 0.001         | Learning rate for the actor (using Adam)
+learning rate - Critic      | 0.001         | Learning rate for the actor (using Adam)
+batch-Size                  | 256           | Batch size used for a learning step
+train-Frequency-Steps       | 4             | How often to request learning from the agent
+train-NumLearning-Steps     | 2             | Number of learning steps per learning request of the agent
+noise-type                  | 'ounoise'     | Type of noise used, either ounoise='Ornstein-Uhlenbeck', or normal="Sample-gaussian"
+noise-OU-Mu                 | 0.0           | Mu-param &mu; of the Ornstein-Uhlenbeck noise process
+noise-OU-Theta              | 0.15          | Theta param &theta; of the Ornstein-Uhlenbeck noise process
+noise-OU-Sigma              | 0.2           | Sigma param &sigma; of the Ornstein-Uhlenbeck noise process
+noise-Normal-Stddev         | 0.2           | Standard deviation of the normal noise
+epsilon-schedule            | 'linear'      | Type of schedule used to decay the noise factor &epsilon;,either 'linear' or 'geometric'
+epsilon-factor-Geom         | 0.999         | Decay factor for the geometric schedule
+epsilon-factor-Linear       | 2e-5          | Decay factor for the linear schedule
+training-starting-step      | 50000         | At which step to start learning
+
+As we mentioned in previous sections, our initial implementation was different from the original
+algorithm from the paper. We noticed this while writing section 1, and decided to ammend the implementation
+to have a more suitable comparison (for future experiments) and to check if the original provides
+better training performance. After updating the implementation we started training and got somewhat
+similar *starting* results with the same set of hyperparameters. However, the performance never got
+better than +0.5, and training was a bit unstable. To ammend this, we started doing the following
+tweaks to the hyperparameters until we got a working solution:
+
+* Because learning was a bit more unstable than the previous implementation, we decided to use
+  a bit more conservative/smaller learning rates. This started showing promise as we almost got
+  to the required +0.5 objective. We then just let it train for more episodes and it eventually
+  got to a point similar to the early-timesteps results of the previous implementation, which
+  we thought might benefit from training from even more episodes.
+
+* We then decided to take a slightly different approach by not using a starting exploration phase,
+  for which we decided to change to choose a different noise-generator than the Ornstein-Uhlenbeck
+  process. We noticed from the previous implementation that non-correlated noise seemed to work
+  well for exploration at the beginning of training, as the agent might have more chances to touch
+  the ball and pass it thatn with the previous noise-generator. This worked fine and we started to
+  get results similar to the ones shown in the project description in the Udacity Platform.
+
+* After just adjusting the noise-scaler factor and changing the learning frequency and number of steps
+  per update, we ended up with an implementation in accordance to the original (from the paper) that
+  worked quite well and did not needed a lot of exploration at first.
+
+The final hyperparameters used for this implementation are shown in the table below.
+
+Hyperparameter              |     Value     |   Description
+----------------------------|---------------|-----------------
+gamma                       | 0.999         | Discount factor
+tau                         | 0.001         | Polyak averaging factor
+replay-buffer size          | 1000000       | Size of the replay buffer
+learning rate - Actor       | 0.0004        | Learning rate for the actor (using Adam)
+learning rate - Critic      | 0.0008        | Learning rate for the actor (using Adam)
+batch-Size                  | 256           | Batch size used for a learning step
+train-Frequency-Steps       | 1             | How often to request learning from the agent
+train-NumLearning-Steps     | 1             | Number of learning steps per learning request of the agent
+noise-type                  | 'normal'      | Type of noise used, either ounoise='Ornstein-Uhlenbeck', or normal="Sample-gaussian"
+noise-OU-Mu                 | 0.0           | Mu-param &mu; of the Ornstein-Uhlenbeck noise process
+noise-OU-Theta              | 0.15          | Theta param &theta; of the Ornstein-Uhlenbeck noise process
+noise-OU-Sigma              | 0.2           | Sigma param &sigma; of the Ornstein-Uhlenbeck noise process
+noise-Normal-Stddev         | 0.2           | Standard deviation of the normal noise
+epsilon-schedule            | 'linear'      | Type of schedule used to decay the noise factor &epsilon;,either 'linear' or 'geometric'
+epsilon-factor-Geom         | 0.999         | Decay factor for the geometric schedule
+epsilon-factor-Linear       | 5e-6          | Decay factor for the linear schedule
+training-starting-step      | 0             | At which step to start learning
 
 ### 3.2 Submission results
 
+Using the configurations mentioned earlier we ended up having working solutions that could
+maintain an average reward of +0.5 over 100 episodes. Below there are some plots of the results
+of training sessions with such configurations. 
 
+* **Initial implementation**. Notice that **we reach an average score of +0.5 starting at episode 5200**, 
+  and then maintain it over the remaining episodes.
+
+![maddpg-results-passing-submission-1][img_results_submission_1]
+
+* **Paper implementation**. Notice that **we reach an average score of +0.5 starting at episode 1500**, 
+  and then maintain it over the remaining episodes.
+
+![maddpg-results-passing-submission-2][img_results_submission_2]
+
+Below we show the agent's performance during evaluation. Notice that the agent can smoothly
+follow the goals, missing it just in very few situations for just a small time before recovering.
+
+![maddpg-results-agent-test][gif_project_3_tennis_agent]
+
+### 3.3 Experiments results
+
+We did some experiments to check both the variability of the results obtained using both implementations
+by running the two versions of the algorithm with various random seeds. Below we show the results of such
+runs:
+
+* **Initial implementation**: Sub-figure (a) shows average scores over a window of 100, and sub-figure 
+  (b) shows an std-plot over all runs.
+
+![maddpg-results-initial-implementation][img_results_initial_implementation]
+
+* **Original paper implementation**: Sub-figure (a) shows average scores over a window of 100, and sub-figure 
+  (b) shows an std-plot over all runs.
+
+![maddpg-results-original-implementation][img_results_original_implementation]
+
+Notice that in both cases all runs successfully reach the objective, with some degree of variability in between
+random seeds. It'd be interesting to run both implementations for longer in order to check if the performance 
+crashes, as in the solution plot shown as baseline by Udacity.
 
 ## 4. Future Work
 
+Finally, below we mention some of the improvements we consider making in following
+updates to this post:
 
+* **Run both implementations over the same conditions of no-initial exploration**: As mentioned
+  in previous sections, for the initial implementation we decided to go for some fixed number of
+  exploration steps, whereas for the original implementation we just started learning from the beginning.
+  This issue was caused mainly because for the initial submission runs we used a Ornstein-Uhlenbeck based
+  noise generator, which seem to not gave us sufficient exploration over the whole space, as the
+  environment resets quite quickly and rewards are a bit more sparse than the previous project.
+
+* **Use PPO and SAC instead of DDPG as actor-critic algorithm**: The algorithm studied here is based
+  on a general actor-critic framework in which critics are centralized and actors are decentralized, so
+  we could use a different actor-critic algorithm in a similar way. It'd be interesting to see how much
+  more stable these other actor-critic algorithms would perform.
+
+* **Run the implementations for longer**: By running it for longer we could test if the algorithm
+  crashes as the baseline does.
+
+* **Solve the optional soccer task**: Tune all baselines and try to solve the optional Soccer Task (soccer 
+  env. from ml-agents).
+
+* **Implement recurrent versions**: Finally, we'd like to implement recurrent variants of these agents. It 
+  might take way longer to train, but it'd be interesting to see if they give better results.
 
 ## References
 
