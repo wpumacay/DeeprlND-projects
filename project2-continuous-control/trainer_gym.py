@@ -8,7 +8,6 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from collections import deque
-from tensorboardX import SummaryWriter
 
 from ccontrol.envs.mlagents import UnityEnvWrapper
 
@@ -52,6 +51,7 @@ def train( env, agent, numEpisodes ) :
     bestSingleScore = -np.inf
     avgScore = -np.inf
 
+    from tensorboardX import SummaryWriter
     writer = SummaryWriter( os.path.join( SESSION_FOLDER, 'tensorboard_summary' ) )
 
     for iepisode in progressbar :

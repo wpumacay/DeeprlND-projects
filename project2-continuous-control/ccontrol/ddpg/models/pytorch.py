@@ -231,7 +231,7 @@ class DDPGActor( model.IDDPGActor ) :
 
 
     def load( self ) :
-        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_actor.pth' ) ) )
+        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_actor.pth' ), map_location=self._device.type ) )
 
 
     def __call__( self, states ) :
@@ -315,7 +315,7 @@ class DDPGCritic( model.IDDPGCritic ) :
 
 
     def load( self ) :
-        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_critic.pth' ) ) )
+        self._backbone.load_state_dict( torch.load( os.path.join( self._savedir, 'checkpoint_critic.pth' ), map_location=self._device.type ) )
 
 
     def __call__( self, states, actions ) :

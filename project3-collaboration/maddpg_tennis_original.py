@@ -556,7 +556,7 @@ def test( env, seed, num_episodes ) :
                               seed ) for _ in range( NUM_AGENTS ) ]
     for iactor, _actorNet in enumerate( actorsNets ) :
         ## _actorNet.load_state_dict( torch.load( './results/maddpg_actor_reacher_' + str( iactor ) + '_' + TRAINING_SESSION_ID + '.pth' ) )
-        _actorNet.load_state_dict( torch.load( os.path.join( SESSION_FOLDER, 'maddpg_actor_reacher_' + str(iactor) + '.pth' ) ) )
+        _actorNet.load_state_dict( torch.load( os.path.join( SESSION_FOLDER, 'maddpg_actor_reacher_' + str(iactor) + '.pth' ), map_location='cpu' ) )
         _actorNet.eval()
 
     progressbar = tqdm( range( 1, num_episodes + 1 ), desc = 'Testing>' )

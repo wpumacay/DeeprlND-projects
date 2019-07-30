@@ -8,7 +8,6 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from collections import deque
-from tensorboardX import SummaryWriter
 
 from ccontrol.envs.mlagents import UnityEnvWrapper
 
@@ -33,7 +32,7 @@ MAX_STEPS_IN_EPISODE    = 3000                          # maximum number of step
 TRAINING_SESSION_ID     = 'session_default'             # name of the training session
 SESSION_FOLDER          = './results/session_default'   # folder where to save training results
 NUMBER_OF_AGENTS        = 20                            # number of agents in the environment
-EXECUTABLE_FULL_PATH    = './executables/Reacher_Linux_multi/Reacher.x86_64'
+EXECUTABLE_FULL_PATH    = './executables/Reacher_Linux/Reacher.x86_64'
 
 def train( env, agent, numEpisodes ) :
     r"""Training loop for our given agent in a given environment
@@ -52,6 +51,8 @@ def train( env, agent, numEpisodes ) :
     bestSingleScore = -np.inf
     avgScore = -np.inf
 
+    # import tensorboardX only for training
+    from tensorboardX import SummaryWriter
     writer = SummaryWriter( os.path.join( SESSION_FOLDER, 'tensorboard_summary' ) )
 
     for iepisode in progressbar :
