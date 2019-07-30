@@ -41,8 +41,8 @@ SESSION_FOLDER          = 'results/session_default' # folder where to save the r
 REPLAY_BUFFER_SIZE      = 500000                    # size of the replay memory
 BATCH_SIZE              = 256                       # batch size of data to grab for learning
 LEARNING_RATE_ACTOR     = 0.001                     # learning rate used for actor network
-LEARNING_RATE_CRITIC    = 0.0004                     # learning rate used for the critic network
-TAU                     = 0.0008                     # soft update factor used for target-network updates
+LEARNING_RATE_CRITIC    = 0.0004                    # learning rate used for the critic network
+TAU                     = 0.0008                    # soft update factor used for target-network updates
 TRAIN_FREQUENCY_STEPS   = 1                         # learn every 10 steps (if there is data)
 TRAIN_NUM_UPDATES       = 1                         # number of updates to do when doing a learning
 
@@ -431,14 +431,15 @@ def train( env, seed, num_episodes ) :
                                                                     for iactorIndx in range( NUM_AGENTS ) ], dim = 1 )
                             _batchJointActionsNext = _batchJointActionsNext.reshape( _batchJointActionsNext.shape[0], -1 )
 
-                        #---------------------- TRAIN CRITICS  --------------------#
-
                         # extract local observations to be fed to the actors, ...
                         # as well as local rewards and dones to be used for local 
                         # q-targets computation using critics
                         _batchLocalObservations = _observations[:,iactor,:]
                         _batchLocalRewards = _rewards[:,iactor,:]
                         _batchLocalDones = _dones[:,iactor,:]
+
+                        #---------------------- TRAIN CRITICS  --------------------#
+
                         # compute current q-values for the joint-actions taken ...
                         # at joint-observations using the critic, as explained ...
                         # in the MADDPG algorithm:

@@ -402,15 +402,15 @@ def train( env, seed, num_episodes ) :
                         _batchJointActionsNext = _batchJointActionsNext.reshape( _batchJointActionsNext.shape[0], -1 )
 
                     for iactor in range( NUM_AGENTS ) :
-
-                        #---------------------- TRAIN CRITICS  --------------------#
-
                         # extract local observations to be fed to the actors, ...
                         # as well as local rewards and dones to be used for local 
                         # q-targets computation using critics
                         _batchLocalObservations = _observations[:,iactor,:]
                         _batchLocalRewards = _rewards[:,iactor,:]
                         _batchLocalDones = _dones[:,iactor,:]
+
+                        #---------------------- TRAIN CRITICS  --------------------#
+
                         # compute current q-values for the joint-actions taken ...
                         # at joint-observations using the critic, as explained ...
                         # in the MADDPG algorithm:
@@ -524,7 +524,8 @@ def test( env, seed, num_episodes ) :
                               env.action_space.shape,
                               seed ) for _ in range( NUM_AGENTS ) ]
     for iactor, _actorNet in enumerate( actorsNets ) :
-        _actorNet.load_state_dict( torch.load( './results/maddpg_actor_reacher_' + str( iactor ) + '_' + TRAINING_SESSION_ID + '.pth' ) )
+        ## _actorNet.load_state_dict( torch.load( './results/maddpg_actor_reacher_' + str( iactor ) + '_' + TRAINING_SESSION_ID + '.pth' ) )
+        _actorNet.load_state_dict( torch.load( os.path.join( SESSION_FOLDER, 'maddpg_actor_reacher_' + str(iactor) + '.pth' ) ) )
         _actorNet.eval()
 
     progressbar = tqdm( range( 1, num_episodes + 1 ), desc = 'Testing>' )
@@ -613,7 +614,7 @@ if __name__ == '__main__' :
     env = UnityEnvWrapper( executableFullPath,
                            numAgents = 2, 
                            mode = 'training' if TRAIN else 'testing', 
-                           workerID = 200, 
+                           workerID = 100, 
                            seed = SEED )
 
     env.seed( SEED )

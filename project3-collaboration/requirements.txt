@@ -10,3 +10,4 @@ ipykernel
 unityagents==0.4.0
 tensorboardX
 torch
+torchsummary
