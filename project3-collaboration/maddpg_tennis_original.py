@@ -18,8 +18,6 @@ from torch import optim as opt
 
 from collaboration.envs.mlagents import UnityEnvWrapper
 
-from tensorboardX import SummaryWriter
-
 from IPython.core.debugger import set_trace
 
 # training parameters (not exposed through the command line)
@@ -361,6 +359,7 @@ def train( env, seed, num_episodes ) :
     avgScore = -np.inf
     noiseNorm = -np.inf
 
+    from tensorboardX import SummaryWriter
     writer = SummaryWriter( os.path.join( SESSION_FOLDER, 'tensorboard_summary' ) )
     istep = 0
 
